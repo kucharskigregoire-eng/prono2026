@@ -172,17 +172,21 @@ function renderMatchs() {
         ? `<span class="cmp-real">${real.h} – ${real.a}</span>`
         : `<span class="cmp-real pending">à jouer</span>`;
       let preds = "";
-      DATA.players.forEach(p => {
-        const arr = p.groupScores[m.group] || [];
-        const s = arr[m.matchIdx];
-        if (!s || s.h === null || s.h === undefined || s.a === null || s.a === undefined) return;
-        const pts = real ? scoreMatch(s, real) : null;
-        const ptsHtml = pts === null ? "" : `<span class="pts pts-${pts}">${pts}</span>`;
-        const cls = pts === 5 ? "cmp-pred is5" : "cmp-pred";
-        preds += `<span class="${cls}"><span class="who">${escapeHtml(p.name)}</span>
-          <span class="sc">${s.h}–${s.a}</span>${ptsHtml}</span>`;
-      });
-      if (!preds) preds = `<span class="muted-row">Aucun prono saisi pour ce match.</span>`;
+      if (!real) {
+        preds = `<span class="muted-row">Pronos masqués jusqu'à la fin du match.</span>`;
+      } else {
+        DATA.players.forEach(p => {
+          const arr = p.groupScores[m.group] || [];
+          const s = arr[m.matchIdx];
+          if (!s || s.h === null || s.h === undefined || s.a === null || s.a === undefined) return;
+          const pts = scoreMatch(s, real);
+          const ptsHtml = `<span class="pts pts-${pts}">${pts}</span>`;
+          const cls = pts === 5 ? "cmp-pred is5" : "cmp-pred";
+          preds += `<span class="${cls}"><span class="who">${escapeHtml(p.name)}</span>
+            <span class="sc">${s.h}–${s.a}</span>${ptsHtml}</span>`;
+        });
+        if (!preds) preds = `<span class="muted-row">Aucun prono saisi pour ce match.</span>`;
+      }
       html += `<div class="cmp-match">
         <div class="cmp-head">
           <div class="cmp-teams">
