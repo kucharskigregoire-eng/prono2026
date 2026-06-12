@@ -173,7 +173,7 @@ function renderMatchs() {
         : `<span class="cmp-real pending">à jouer</span>`;
       let preds = "";
       if (!real) {
-        preds = `<span class="muted-row">Pronos masqués jusqu'à la fin du match.</span>`;
+        preds = `<span class="muted-row">🔒 Pronos masqués jusqu'à la fin du match.</span>`;
       } else {
         DATA.players.forEach(p => {
           const arr = p.groupScores[m.group] || [];
