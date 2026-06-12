@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Résultats & publication</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/7.2.3/css/flag-icons.min.css">
+<link rel="stylesheet" href="style.css">
+<script src="common.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-ball">⚙️</div>
+      <div class="logo-text">
+        <h1>Admin — organisateur</h1>
+        <span>Résultats réels &amp; publication</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="save-indicator saved" id="adminStatus">Brouillon enregistré</span>
+      <button class="btn btn-primary" id="exportDataBtn">⬇ Générer data.json</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="tabs">
+    <button class="tab-btn active" data-panel="resultats">📝 Résultats réels</button>
+    <button class="tab-btn" data-panel="joueurs">👥 Joueurs (<span id="playerCount">0</span>)</button>
+    <button class="tab-btn" data-panel="apercu">👁️ Aperçu classement</button>
+    <a class="tab-btn" href="index.html">🏆 Voir le classement public</a>
+  </div>
+
+  <div class="notice">
+    <b>Comment ça marche.</b> Ton travail est sauvegardé automatiquement dans ce navigateur.
+    Saisis les vrais scores au fur et à mesure, importe les fichiers <b>.json</b> que t'envoient tes collègues,
+    puis clique <b>« Générer data.json »</b> et remplace le fichier <code>data.json</code> de ton dépôt GitHub.
+    Le classement public se met alors à jour pour tout le monde.
+  </div>
+
+  <div class="panel active" id="panel-resultats">
+    <div class="top-fields">
+      <div class="field">
+        <label>Meilleur buteur réel du tournoi (10 pts)</label>
+        <input type="text" id="realTopScorer" placeholder="À renseigner en fin de tournoi" maxlength="40" />
+      </div>
+      <div class="field" style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-danger btn-sm" id="resetResults">Effacer les résultats</button>
+        <button class="btn btn-secondary btn-sm" id="reloadData">Repartir du data.json publié</button>
+      </div>
+    </div>
+    <div class="section-title" style="font-size:1.4rem"><span class="step-num">✓</span>Scores réels des poules</div>
+    <div class="groups-grid" id="resultsGrid"></div>
+  </div>
+
+  <div class="panel" id="panel-joueurs">
+    <div class="notice">
+      Importe un ou plusieurs fichiers <b>.json</b> exportés depuis « Mes pronos ». Un même prénom écrase l'ancien import.
+    </div>
+    <p style="margin-bottom:16px">
+      <label class="btn btn-primary" style="cursor:pointer">
+        ⬆ Importer des fichiers de pronos
+        <input type="file" id="importPlayers" accept=".json" multiple style="display:none" />
+      </label>
+    </p>
+    <div id="playersList"></div>
+  </div>
+
+  <div class="panel" id="panel-apercu"></div>
+
+</div>
+
+<script>
+"use strict";
+
+const ADMIN_KEY = "wc2026-admin-v1";
+let ADMIN = { actual: { groupScores: null, topScorer: "" }, players: [] };
+
+function freshActual() { return { groupScores: emptyPlayer().groupScores, topScorer: "" }; }
+
+function normalizePlayer(p) {
+  const base = emptyPlayer();
+  return {
+    name: (p && p.name && String(p.name).trim()) || "Anonyme",
+    topScorer: (p && p.topScorer) || "",
+    groupScores: (p && p.groupScores) || base.groupScores,
+    knockout: (p && p.knockout) || base.knockout
+  };
+}
+
+function setStatus(txt, ok) {
+  const el = document.getElementById("adminStatus");
+  el.textContent = txt; el.className = "save-indicator" + (ok ? " saved" : "");
+}
+
+function saveAdmin() {
+  try { localStorage.setItem(ADMIN_KEY, JSON.stringify(ADMIN)); setStatus("Brouillon enregistré", true); }
+  catch (e) { setStatus("Erreur d'enregistrement", false); }
+}
+
+async function loadAdmin() {
+  let loaded = false;
+  try {
+    const raw = localStorage.getItem(ADMIN_KEY);
+    if (raw) { const p = JSON.parse(raw); if (p && typeof p === "object") { ADMIN = p; loaded = true; } }
+  } catch (e) {}
+  if (!loaded) {
+    // amorcer depuis le data.json publié si présent
+    try {
+      const res = await fetch("data.json", { cache: "no-store" });
+      if (res.ok) {
+        const d = await res.json();
+        ADMIN.actual = { groupScores: (d.actual && d.actual.groupScores) || emptyPlayer().groupScores,
+                         topScorer: (d.actual && d.actual.topScorer) || "" };
+        ADMIN.players = Array.isArray(d.players) ? d.players.map(normalizePlayer) : [];
+      }
+    } catch (e) {}
+  }
+  if (!ADMIN.actual || !ADMIN.actual.groupScores) ADMIN.actual = freshActual();
+  if (!Array.isArray(ADMIN.players)) ADMIN.players = [];
+  renderAll();
+}
+
+// ============ GRILLE DES RÉSULTATS RÉELS ============
+function renderResultsGrid() {
+  const grid = document.getElementById("resultsGrid");
+  let html = "";
+  GROUPS.forEach(g => {
+    html += `<div class="group-card"><div class="group-header">
+      <span class="grp-label">Groupe ${g.letter}</span><span class="grp-tag">résultats</span>
+    </div><div class="match-list">`;
+    const matches = SCHEDULE.filter(m => m.group === g.letter)
+      .sort((a, b) => a.matchIdx - b.matchIdx);
+    matches.forEach(m => {
+      const s = ADMIN.actual.groupScores[g.letter][m.matchIdx] || { h: null, a: null };
+      const hv = (s.h === null || s.h === undefined) ? "" : s.h;
+      const av = (s.a === null || s.a === undefined) ? "" : s.a;
+      html += `<div class="match-row">
+        <span class="match-team-h"><span class="name">${escapeHtml(m.home)}</span>${flagHTML(m.home, "fi-md")}</span>
+        <input type="text" inputmode="numeric" maxlength="2" class="score-input${hv!==""?" filled":""}" value="${hv}" data-g="${g.letter}" data-m="${m.matchIdx}" data-s="h" />
+        <span class="score-sep">–</span>
+        <input type="text" inputmode="numeric" maxlength="2" class="score-input${av!==""?" filled":""}" value="${av}" data-g="${g.letter}" data-m="${m.matchIdx}" data-s="a" />
+        <span class="match-team-a">${flagHTML(m.away, "fi-md")}<span class="name">${escapeHtml(m.away)}</span></span>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  grid.innerHTML = html;
+  grid.querySelectorAll(".score-input").forEach(inp => {
+    inp.addEventListener("input", (e) => {
+      const cleaned = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+      if (cleaned !== e.target.value) e.target.value = cleaned;
+      const gg = e.target.dataset.g, mm = parseInt(e.target.dataset.m), ss = e.target.dataset.s;
+      const val = cleaned === "" ? null : parseInt(cleaned);
+      ADMIN.actual.groupScores[gg][mm][ss] = (val === null || isNaN(val)) ? null : val;
+      e.target.classList.toggle("filled", cleaned !== "");
+      saveAdmin(); renderApercu();
+    });
+  });
+}
+
+// ============ JOUEURS ============
+function renderPlayers() {
+  document.getElementById("playerCount").textContent = ADMIN.players.length;
+  const c = document.getElementById("playersList");
+  if (!ADMIN.players.length) { c.innerHTML = `<div class="empty-state">Aucun fichier de pronos importé.</div>`; return; }
+  let html = `<table class="lb-table"><thead><tr><th>Joueur</th><th class="num">Matchs pronostiqués</th><th>Buteur prédit</th><th></th></tr></thead><tbody>`;
+  ADMIN.players.forEach((p, i) => {
+    let filled = 0;
+    GROUPS.forEach(g => (p.groupScores[g.letter] || []).forEach(s => { if (s && s.h !== null && s.h !== undefined && s.a !== null && s.a !== undefined) filled++; }));
+    html += `<tr>
+      <td class="lb-name">${escapeHtml(p.name)}</td>
+      <td class="num">${filled} / 72</td>
+      <td>${p.topScorer ? escapeHtml(p.topScorer) : '<span class="muted-row">—</span>'}</td>
+      <td><button class="btn btn-danger btn-sm" data-rm="${i}">Retirer</button></td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  c.innerHTML = html;
+  c.querySelectorAll("[data-rm]").forEach(b => b.addEventListener("click", () => {
+    ADMIN.players.splice(parseInt(b.dataset.rm), 1); saveAdmin(); renderPlayers(); renderApercu();
+  }));
+}
+
+document.getElementById("importPlayers").addEventListener("change", (e) => {
+  const files = Array.from(e.target.files || []);
+  let pending = files.length, added = 0, errors = 0;
+  if (!pending) return;
+  files.forEach(f => {
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const p = normalizePlayer(JSON.parse(r.result));
+        const idx = ADMIN.players.findIndex(x => normalizeName(x.name) === normalizeName(p.name));
+        if (idx >= 0) ADMIN.players[idx] = p; else ADMIN.players.push(p);
+        added++;
+      } catch (err) { errors++; }
+      if (--pending === 0) {
+        saveAdmin(); renderPlayers(); renderApercu();
+        if (errors) alert(added + " importé(s), " + errors + " fichier(s) invalide(s).");
+      }
+    };
+    r.onerror = () => { errors++; if (--pending === 0) { saveAdmin(); renderPlayers(); renderApercu(); } };
+    r.readAsText(f);
+  });
+  e.target.value = "";
+});
+
+// ============ APERÇU CLASSEMENT ============
+function renderApercu() {
+  const c = document.getElementById("panel-apercu");
+  ADMIN.actual.topScorer = document.getElementById("realTopScorer").value;
+  const rows = ADMIN.players.map(p => ({ p, s: computePlayerScore(p, ADMIN.actual) }))
+    .sort((a, b) => b.s.total - a.s.total || b.s.exact - a.s.exact || a.p.name.localeCompare(b.p.name));
+  if (!rows.length) { c.innerHTML = `<div class="empty-state">Importe des pronos pour voir l'aperçu.</div>`; return; }
+  let html = `<table class="lb-table"><thead><tr><th></th><th>Joueur</th><th class="num">Total</th><th class="num">★5</th><th class="num">●3</th><th class="num">▲2</th><th class="num">Buteur</th></tr></thead><tbody>`;
+  rows.forEach((r, i) => {
+    const rank = i + 1;
+    html += `<tr class="${rank<=3?"r"+rank:""}"><td class="lb-rank">${rank}</td>
+      <td class="lb-name">${escapeHtml(r.p.name)}</td>
+      <td class="num"><span class="lb-total">${r.s.total}</span></td>
+      <td class="num">${r.s.exact}</td><td class="num">${r.s.ecart}</td><td class="num">${r.s.vainqueur}</td>
+      <td class="num">${r.s.topScorerPts ? "+10" : "—"}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  c.innerHTML = html;
+}
+
+// ============ EXPORT data.json ============
+function exportData() {
+  ADMIN.actual.topScorer = document.getElementById("realTopScorer").value.trim();
+  const out = {
+    updatedAt: new Date().toISOString(),
+    actual: ADMIN.actual,
+    players: ADMIN.players
+  };
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "data.json";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ============ DIVERS ============
+function renderAll() {
+  document.getElementById("realTopScorer").value = ADMIN.actual.topScorer || "";
+  renderResultsGrid(); renderPlayers(); renderApercu();
+}
+
+document.getElementById("realTopScorer").addEventListener("input", () => {
+  ADMIN.actual.topScorer = document.getElementById("realTopScorer").value;
+  saveAdmin(); renderApercu();
+});
+document.getElementById("exportDataBtn").addEventListener("click", exportData);
+document.getElementById("resetResults").addEventListener("click", () => {
+  if (!confirm("Effacer tous les scores réels saisis ? (les pronos importés sont conservés)")) return;
+  ADMIN.actual = freshActual(); document.getElementById("realTopScorer").value = "";
+  saveAdmin(); renderAll();
+});
+document.getElementById("reloadData").addEventListener("click", async () => {
+  if (!confirm("Recharger depuis le data.json publié ? Ton brouillon local sera remplacé.")) return;
+  localStorage.removeItem(ADMIN_KEY); ADMIN = { actual: { groupScores: null, topScorer: "" }, players: [] };
+  await loadAdmin(); saveAdmin();
+});
+
+document.querySelectorAll(".tab-btn[data-panel]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn[data-panel]").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-" + btn.dataset.panel).classList.add("active");
+  });
+});
+
+loadAdmin();
+</script>
+</body>
+</html>

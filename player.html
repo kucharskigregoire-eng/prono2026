@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mes pronostics — Coupe du Monde 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/7.2.3/css/flag-icons.min.css">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="common.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-ball">⚽</div>
+      <div class="logo-text">
+        <h1>World Cup 2026</h1>
+        <span>Mes Pronostics</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="save-indicator saved" id="saveStatus">Enregistré</span>
+      <button class="btn btn-secondary" id="importBtnTop">⬆ Importer</button>
+      <button class="btn btn-primary" id="exportJsonBtn">📤 Envoyer mes pronos</button>
+      <button class="btn btn-secondary" id="exportBtnTop">⬇ Excel</button>
+      <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none" />
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="tabs">
+    <a class="tab-btn active" href="player.html">✏️ Mes pronos</a>
+    <a class="tab-btn" href="index.html">🏆 Classement</a>
+  </div>
+
+  <div class="notice">
+    Remplis tes pronostics ci-dessous (sauvegarde automatique sur cet appareil), puis clique
+    <b>« 📤 Envoyer mes pronos »</b> : un fichier <b>.json</b> est téléchargé. Transmets-le à l'organisateur
+    pour apparaître dans le classement commun.
+  </div>
+
+  <div class="top-fields">
+    <div class="field">
+      <label>Votre prénom</label>
+      <input type="text" id="nameInput" placeholder="Ex: Grégoire" maxlength="30" />
+    </div>
+    <div class="field">
+      <label>Meilleur buteur du tournoi</label>
+      <input type="text" id="topScorerInput" placeholder="Ex: Mbappé" maxlength="30" />
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span class="step-num">1</span>Phase de groupes
+    <span class="section-hint">72 matchs · classements calculés en direct</span>
+  </div>
+  <div class="groups-grid" id="groupsGrid"></div>
+
+  <div class="section-title" style="font-size: 1.5rem;">
+    🗓 Calendrier des matchs
+    <span class="section-hint">Pronostics synchronisés avec la phase de groupes</span>
+  </div>
+  <div class="cal-filters" id="calFilters"></div>
+  <div id="calendarList"></div>
+
+  <div class="section-title">
+    <span class="step-num">2</span>Arbre final
+    <span class="section-hint">Cliquez l'équipe qui passe au tour suivant</span>
+  </div>
+  <div class="bracket-info" id="bracketInfo"></div>
+
+  <div class="bracket-scroll">
+    <div class="bracket-tree" id="bracketTree"></div>
+  </div>
+
+  <div class="section-title" style="font-size: 1.4rem;">Match pour la 3e place</div>
+  <div id="thirdPlaceContainer"></div>
+
+  <div class="champion-banner">
+    <div class="champion-info">
+      <div class="trophy-icon">🏆</div>
+      <div class="champion-text">
+        <div class="label">Champion du Monde prédit</div>
+        <div class="name-row" id="championRow">
+          <span class="name empty" id="championDisplay">À déterminer</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions-row">
+    <div></div>
+    <div>
+      <button class="btn btn-secondary" id="importBtnBottom">⬆ Importer un Excel</button>
+      <button class="btn btn-primary" id="exportJsonBtnBottom">📤 Envoyer mes pronos</button>
+      <button class="btn btn-secondary" id="exportBtnBottom">⬇ Exporter en Excel</button>
+      <button class="btn btn-danger btn-sm" id="resetBtn">Tout effacer</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+
+
+const STORAGE_KEY = "wc2026-mine-v5";
+const LEGACY_KEY_V4 = "wc2026-mine-v4"; // bon calendrier de poules, ancien arbre final
+const LEGACY_KEY_V3 = "wc2026-mine-v3"; // ancien calendrier de poules + ancien arbre final
+
+// ============ STATE ============
+let player = emptyPlayer();
+let saveTimeout = null;
+let calFilter = "all";
+
+
+// ============ STORAGE ============
+// Remappe des scores de poule de l'ANCIEN calendrier vers le NOUVEAU, par affiche
+// (les 2 équipes), en inversant le score si domicile/extérieur a changé.
+function migrateGroupScoresFromLegacy(oldGroupScores) {
+  const fresh = emptyPlayer().groupScores;
+  if (!oldGroupScores) return fresh;
+  GROUPS.forEach(g => {
+    const letter = g.letter;
+    const oldPairs = LEGACY_PAIRS_BY_GROUP[letter];
+    const oldScores = oldGroupScores[letter];
+    if (!oldPairs || !oldScores) return;
+    const newPairs = PAIRS_BY_GROUP[letter]; // [hIdx, aIdx] dans g.teams
+    oldPairs.forEach((pair, k) => {
+      const s = oldScores[k];
+      if (!s || s.h === null || s.h === undefined || s.a === null || s.a === undefined) return;
+      const oldHome = pair[0], oldAway = pair[1];
+      for (let j = 0; j < newPairs.length; j++) {
+        const nh = g.teams[newPairs[j][0]];
+        const na = g.teams[newPairs[j][1]];
+        if (nh === oldHome && na === oldAway) { fresh[letter][j] = { h: s.h, a: s.a }; break; }
+        if (nh === oldAway && na === oldHome) { fresh[letter][j] = { h: s.a, a: s.h }; break; }
+      }
+    });
+  });
+  return fresh;
+}
+
+// Remappe les choix de 16es (par numéro de match) vers le nouvel arbre, et réinitialise
+// les tours suivants car l'arborescence (8es → finale) a changé.
+function remapKnockoutForNewBracket(oldKo) {
+  const fresh = emptyPlayer().knockout;
+  if (!oldKo || !Array.isArray(oldKo.r32)) return fresh;
+  const newLabels = R32_DEFS.map(d => d.label);
+  oldKo.r32.forEach((pick, oldIdx) => {
+    if (pick === null || pick === undefined) return;
+    const newIdx = newLabels.indexOf(LEGACY_R32_LABELS[oldIdx]);
+    if (newIdx !== -1) fresh.r32[newIdx] = pick;
+  });
+  return fresh; // r16/qf/sf/final/third réinitialisés (arbre modifié)
+}
+
+// Stockage local (compatible GitHub Pages)
+function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+function lsSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
+
+function loadData() {
+  try {
+    const cur = lsGet(STORAGE_KEY);
+    if (cur) {
+      const parsed = JSON.parse(cur);
+      if (parsed && typeof parsed === "object") player = mergeWithDefault(parsed);
+    } else {
+      let sourceVal = null, sourceIsV3 = false;
+      const v4 = lsGet(LEGACY_KEY_V4);
+      if (v4) sourceVal = v4;
+      else { const v3 = lsGet(LEGACY_KEY_V3); if (v3) { sourceVal = v3; sourceIsV3 = true; } }
+      if (sourceVal) {
+        const parsedOld = JSON.parse(sourceVal);
+        if (parsedOld && typeof parsedOld === "object") {
+          player = mergeWithDefault(parsedOld);
+          if (sourceIsV3) player.groupScores = migrateGroupScoresFromLegacy(parsedOld.groupScores);
+          player.knockout = remapKnockoutForNewBracket(parsedOld.knockout);
+          lsSet(STORAGE_KEY, JSON.stringify(player));
+        }
+      }
+    }
+  } catch (err) {}
+  renderAll();
+}
+
+function mergeWithDefault(p) {
+  const def = emptyPlayer();
+  return {
+    name: p.name || "",
+    topScorer: p.topScorer || "",
+    groupScores: p.groupScores || def.groupScores,
+    knockout: {
+      r32: (p.knockout && p.knockout.r32) || def.knockout.r32,
+      r16: (p.knockout && p.knockout.r16) || def.knockout.r16,
+      qf: (p.knockout && p.knockout.qf) || def.knockout.qf,
+      sf: (p.knockout && p.knockout.sf) || def.knockout.sf,
+      final: (p.knockout && p.knockout.final !== undefined) ? p.knockout.final : null,
+      third: (p.knockout && p.knockout.third !== undefined) ? p.knockout.third : null
+    }
+  };
+}
+
+function scheduleSave() {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  setStatus("Modification…", false);
+  saveTimeout = setTimeout(saveData, 400);
+}
+
+function saveData() {
+  try { lsSet(STORAGE_KEY, JSON.stringify(player)); setStatus("Enregistré", true); }
+  catch (err) { setStatus("Erreur d'enregistrement", false); }
+}
+
+function setStatus(text, saved) {
+  const el = document.getElementById("saveStatus");
+  if (!el) return;
+  el.textContent = text;
+  el.className = "save-indicator" + (saved ? " saved" : "");
+}
+
+
+// ============ RENDERING — STANDINGS ============
+function buildStandingsHTML(standings, qualifying3rdGroups, groupLetter) {
+  let html = `<table>
+    <thead><tr><th>Équipe</th><th>J</th><th>Pts</th><th>+/-</th></tr></thead>
+    <tbody>`;
+  standings.forEach((t, i) => {
+    const rank = i + 1;
+    const isQualified3rd = rank === 3 && qualifying3rdGroups.has(groupLetter);
+    const trClass = `rank-${rank}` + (isQualified3rd ? " third-qualified" : "");
+    const gdStr = t.played > 0 ? (t.gd > 0 ? "+" + t.gd : t.gd) : "—";
+    const ptsStr = t.played > 0 ? t.pts : "—";
+    html += `<tr class="${trClass}">
+      <td><span class="rank-dot"></span>${flagHTML(t.name, "fi-sm")}${escapeHtml(t.name)}</td>
+      <td>${t.played}</td>
+      <td>${ptsStr}</td>
+      <td>${gdStr}</td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  return html;
+}
+
+function updateAllStandings(bracket) {
+  GROUPS.forEach(g => {
+    const card = document.querySelector(`.group-card[data-group="${g.letter}"]`);
+    if (!card) return;
+    const standingsDiv = card.querySelector(".standings");
+    if (!standingsDiv) return;
+    standingsDiv.innerHTML = buildStandingsHTML(
+      bracket.standings[g.letter],
+      bracket.qualifying3rdGroups,
+      g.letter
+    );
+  });
+}
+
+// ============ RENDERING — GROUPS GRID ============
+function renderGroupsGrid(bracket) {
+  const grid = document.getElementById("groupsGrid");
+  grid.innerHTML = "";
+  GROUPS.forEach(g => {
+    const card = document.createElement("div");
+    card.className = "group-card";
+    card.dataset.group = g.letter;
+
+    let inner = `<div class="group-header">
+      <span class="grp-label">Groupe ${g.letter}</span>
+      <span class="grp-tag">4 équipes</span>
+    </div>`;
+    inner += `<div class="standings">${buildStandingsHTML(bracket.standings[g.letter], bracket.qualifying3rdGroups, g.letter)}</div>`;
+    inner += `<div class="match-list">`;
+    const pairs = PAIRS_BY_GROUP[g.letter];
+    pairs.forEach((pair, mIdx) => {
+      const s = player.groupScores[g.letter][mIdx];
+      const homeTeam = g.teams[pair[0]];
+      const awayTeam = g.teams[pair[1]];
+      const hVal = (s.h === null || s.h === undefined) ? "" : s.h;
+      const aVal = (s.a === null || s.a === undefined) ? "" : s.a;
+      const hClass = hVal !== "" ? " filled" : "";
+      const aClass = aVal !== "" ? " filled" : "";
+      inner += `
+        <div class="match-row">
+          <span class="match-team-h"><span class="name">${escapeHtml(homeTeam)}</span>${flagHTML(homeTeam, "fi-md")}</span>
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="score-input${hClass}" value="${hVal}" data-group="${g.letter}" data-match="${mIdx}" data-side="h" />
+          <span class="score-sep">–</span>
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="score-input${aClass}" value="${aVal}" data-group="${g.letter}" data-match="${mIdx}" data-side="a" />
+          <span class="match-team-a">${flagHTML(awayTeam, "fi-md")}<span class="name">${escapeHtml(awayTeam)}</span></span>
+        </div>
+      `;
+    });
+    inner += `</div>`;
+
+    card.innerHTML = inner;
+    grid.appendChild(card);
+  });
+
+  attachScoreListeners(grid);
+}
+
+// ============ RENDERING — CALENDAR ============
+
+function renderCalendarFilters() {
+  const container = document.getElementById("calFilters");
+  let html = `<button class="filter-btn${calFilter==="all"?" active":""}" data-filter="all">Tous</button>`;
+  GROUPS.forEach(g => {
+    html += `<button class="filter-btn${calFilter===g.letter?" active":""}" data-filter="${g.letter}">${g.letter}</button>`;
+  });
+  container.innerHTML = html;
+  container.querySelectorAll(".filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      calFilter = btn.dataset.filter;
+      renderCalendarFilters();
+      renderCalendar();
+    });
+  });
+}
+
+function renderCalendar() {
+  const container = document.getElementById("calendarList");
+  const filtered = calFilter === "all"
+    ? SCHEDULE
+    : SCHEDULE.filter(m => m.group === calFilter);
+
+  // Sort by date, then group
+  const sorted = [...filtered].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.group.localeCompare(b.group);
+  });
+
+  // Group by date
+  const byDate = {};
+  sorted.forEach(m => {
+    if (!byDate[m.date]) byDate[m.date] = [];
+    byDate[m.date].push(m);
+  });
+
+  let html = "";
+  Object.keys(byDate).sort().forEach(date => {
+    html += `<div class="cal-date-group">`;
+    html += `<div class="cal-date-header">${formatDateFr(date)}</div>`;
+    byDate[date].forEach(m => {
+      const s = player.groupScores[m.group][m.matchIdx];
+      const hVal = (s.h === null || s.h === undefined) ? "" : s.h;
+      const aVal = (s.a === null || s.a === undefined) ? "" : s.a;
+      const hClass = hVal !== "" ? " filled" : "";
+      const aClass = aVal !== "" ? " filled" : "";
+      html += `
+        <div class="cal-match">
+          <div class="cal-match-grp">${m.group}</div>
+          <div class="cal-match-home">
+            <span class="name">${escapeHtml(m.home)}</span>
+            ${flagHTML(m.home, "fi-md")}
+          </div>
+          <div class="cal-match-score">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="score-input${hClass}" value="${hVal}" data-group="${m.group}" data-match="${m.matchIdx}" data-side="h" />
+            <span class="score-sep">–</span>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="score-input${aClass}" value="${aVal}" data-group="${m.group}" data-match="${m.matchIdx}" data-side="a" />
+          </div>
+          <div class="cal-match-away">
+            ${flagHTML(m.away, "fi-md")}
+            <span class="name">${escapeHtml(m.away)}</span>
+          </div>
+          <div class="cal-match-venue">${escapeHtml(m.venue)}</div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  });
+
+  container.innerHTML = html;
+  attachScoreListeners(container);
+}
+
+// ============ SCORE INPUT SYNC ============
+function attachScoreListeners(scope) {
+  scope.querySelectorAll(".score-input").forEach(input => {
+    input.addEventListener("input", (e) => {
+      const raw = e.target.value;
+      const cleaned = raw.replace(/[^0-9]/g, "").slice(0, 2);
+      if (cleaned !== raw) {
+        const cursorPos = e.target.selectionStart;
+        e.target.value = cleaned;
+        try { e.target.setSelectionRange(cursorPos, cursorPos); } catch (_) {}
+      }
+      const group = e.target.dataset.group;
+      const match = parseInt(e.target.dataset.match);
+      const side = e.target.dataset.side;
+      const val = cleaned === "" ? null : parseInt(cleaned);
+      player.groupScores[group][match][side] = (val === null || isNaN(val)) ? null : val;
+      e.target.classList.toggle("filled", cleaned !== "");
+
+      // Sync any other inputs targeting the same cell (e.g. group view ↔ calendar view)
+      const allOthers = document.querySelectorAll(`.score-input[data-group="${group}"][data-match="${match}"][data-side="${side}"]`);
+      allOthers.forEach(other => {
+        if (other !== e.target && other.value !== cleaned) {
+          other.value = cleaned;
+          other.classList.toggle("filled", cleaned !== "");
+        }
+      });
+
+      const newBracket = computeBracket(player);
+      updateAllStandings(newBracket);
+      renderBracketTree(newBracket);
+      renderThirdPlace(newBracket);
+      updateChampionDisplay(newBracket);
+      scheduleSave();
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const all = Array.from(scope.querySelectorAll(".score-input"));
+        const idx = all.indexOf(e.target);
+        const next = all[idx + 1];
+        if (next) next.focus();
+      }
+    });
+  });
+}
+
+// ============ RENDERING — BRACKET TREE ============
+function renderTreeTeamButton(team, round, matchIdx, side, isWinner, otherReady) {
+  const name = team.name || team.label;
+  const isReady = !!team.name;
+  const disabled = !(isReady && otherReady);
+  const cls = "team-btn" + (isWinner ? " winner" : "");
+  const disabledAttr = disabled ? "disabled" : "";
+  const seedTag = isReady ? `<span class="seed-tag">${escapeHtml(team.label)}</span>` : "";
+  const flag = isReady ? flagHTML(team.name, "fi-sm") : `<span class="placeholder-dot"></span>`;
+  return `<button class="${cls}" data-round="${round}" data-match-idx="${matchIdx}" data-side="${side}" ${disabledAttr}>
+    ${flag}
+    <span class="team-name">${escapeHtml(name)}</span>
+    ${seedTag}
+  </button>`;
+}
+
+function renderTreeMatchCard(match, label, pickIdx, round, matchIdx) {
+  const homeReady = !!match.home.name;
+  const awayReady = !!match.away.name;
+  return `<div class="match-card-tree">
+    <div class="match-label">${escapeHtml(label)}</div>
+    ${renderTreeTeamButton(match.home, round, matchIdx, 0, pickIdx === 0, awayReady)}
+    ${renderTreeTeamButton(match.away, round, matchIdx, 1, pickIdx === 1, homeReady)}
+  </div>`;
+}
+
+function renderBracketTree(bracket) {
+  const info = document.getElementById("bracketInfo");
+  if (!bracket.allGroupsComplete) {
+    info.className = "bracket-info";
+    info.innerHTML = `<b>Continuez de remplir les scores des groupes.</b> Dès que les 12 groupes seront complets, le tableau ci-dessous sera prêt — chaque clic se cascadera tout seul.`;
+  } else {
+    info.className = "bracket-info ready";
+    info.innerHTML = `<b>Les 12 groupes sont complets.</b> Cliquez l'équipe qui passe au tour suivant — chaque choix se cascade dans l'arbre.`;
+  }
+
+  const tree = document.getElementById("bracketTree");
+  const rounds = [
+    { id: "r32", label: "16es de finale", matches: bracket.r32, picks: player.knockout.r32 },
+    { id: "r16", label: "8es de finale", matches: bracket.r16, picks: player.knockout.r16 },
+    { id: "qf", label: "Quarts", matches: bracket.qf, picks: player.knockout.qf },
+    { id: "sf", label: "Demi-finales", matches: bracket.sf, picks: player.knockout.sf },
+    { id: "final", label: "Finale", matches: [bracket.final], picks: [player.knockout.final] }
+  ];
+
+  let html = "";
+  rounds.forEach(round => {
+    html += `<div class="bracket-round" data-round="${round.id}">`;
+    html += `<div class="bracket-round-header">${escapeHtml(round.label)}</div>`;
+    html += `<div class="bracket-round-body">`;
+    round.matches.forEach((m, idx) => {
+      const labelText = round.id === "final" ? "★ FINALE ★"
+        : round.id === "sf" ? "Demi " + (idx+1)
+        : round.id === "qf" ? "Quart " + (idx+1)
+        : round.id === "r16" ? "8e #" + (idx+1)
+        : "16e #" + (idx+1);
+      html += `<div class="match-wrapper">${renderTreeMatchCard(m, labelText, round.picks[idx], round.id, idx)}</div>`;
+    });
+    html += `</div></div>`;
+  });
+  tree.innerHTML = html;
+
+  tree.querySelectorAll(".team-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.disabled) return;
+      handlePick(btn.dataset.round, parseInt(btn.dataset.matchIdx), parseInt(btn.dataset.side));
+    });
+  });
+}
+
+function renderThirdPlace(bracket) {
+  const container = document.getElementById("thirdPlaceContainer");
+  const m = bracket.third;
+  const pickIdx = player.knockout.third;
+  const homeReady = !!m.home.name;
+  const awayReady = !!m.away.name;
+  container.innerHTML = `
+    <div class="third-place-card">
+      <div class="match-label">🥉 Match pour la 3e place</div>
+      ${renderTreeTeamButton(m.home, "third", 0, 0, pickIdx === 0, awayReady)}
+      ${renderTreeTeamButton(m.away, "third", 0, 1, pickIdx === 1, homeReady)}
+    </div>
+  `;
+  container.querySelectorAll(".team-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.disabled) return;
+      handlePick("third", 0, parseInt(btn.dataset.side));
+    });
+  });
+}
+
+function updateChampionDisplay(bracket) {
+  const row = document.getElementById("championRow");
+  if (!row) return;
+  if (bracket.champion) {
+    row.innerHTML = `${flagHTML(bracket.champion, "fi-xl")}<span class="name">${escapeHtml(bracket.champion)}</span>`;
+  } else {
+    row.innerHTML = `<span class="name empty">À déterminer</span>`;
+  }
+}
+
+function handlePick(round, matchIdx, side) {
+  if (round === "final") {
+    player.knockout.final = (player.knockout.final === side) ? null : side;
+  } else if (round === "third") {
+    player.knockout.third = (player.knockout.third === side) ? null : side;
+  } else {
+    const arr = player.knockout[round];
+    arr[matchIdx] = (arr[matchIdx] === side) ? null : side;
+  }
+  const newBracket = computeBracket(player);
+  renderBracketTree(newBracket);
+  renderThirdPlace(newBracket);
+  updateChampionDisplay(newBracket);
+  scheduleSave();
+}
+
+// ============ EXPORT EXCEL ============
+function exportExcel() {
+  if (typeof XLSX === "undefined") {
+    alert("La bibliothèque Excel n'a pas pu être chargée.");
+    return;
+  }
+  const bracket = computeBracket(player);
+  const wb = XLSX.utils.book_new();
+
+  const summary = [
+    ["PRONOSTIC COUPE DU MONDE 2026"], [""],
+    ["Nom", player.name || "(non renseigné)"],
+    ["Champion prédit", bracket.champion || "(non choisi)"],
+    ["Finaliste", bracket.runnerUp || "(non choisi)"],
+    ["3e place", bracket.thirdPlace || "(non choisi)"],
+    ["Meilleur buteur", player.topScorer || "(non choisi)"],
+    [""], ["Généré le", new Date().toLocaleString("fr-FR")]
+  ];
+  const wsSummary = XLSX.utils.aoa_to_sheet(summary);
+  wsSummary["!cols"] = [{ wch: 22 }, { wch: 32 }];
+  XLSX.utils.book_append_sheet(wb, wsSummary, "Résumé");
+
+  const matchRows = [["Groupe", "Date", "Lieu", "Domicile", "Score H", "Score A", "Extérieur", "Résultat"]];
+  SCHEDULE.forEach(m => {
+    const s = player.groupScores[m.group][m.matchIdx];
+    const sh = s.h, sa = s.a;
+    let result = "";
+    if (sh !== null && sa !== null) {
+      if (sh > sa) result = `${m.home} gagne`;
+      else if (sh < sa) result = `${m.away} gagne`;
+      else result = "Match nul";
+    }
+    matchRows.push([m.group, m.date, m.venue, m.home, sh === null ? "" : sh, sa === null ? "" : sa, m.away, result]);
+  });
+  const wsMatches = XLSX.utils.aoa_to_sheet(matchRows);
+  wsMatches["!cols"] = [{wch:7},{wch:12},{wch:14},{wch:22},{wch:8},{wch:8},{wch:22},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, wsMatches, "Calendrier & scores");
+
+  const standingsRows = [["Groupe", "Rang", "Équipe", "J", "G", "N", "P", "BP", "BC", "+/-", "Pts", "Qualifié"]];
+  GROUPS.forEach(g => {
+    bracket.standings[g.letter].forEach((t, i) => {
+      const rank = i + 1;
+      let qualif = "";
+      if (rank === 1) qualif = "1er de groupe";
+      else if (rank === 2) qualif = "2e de groupe";
+      else if (rank === 3) qualif = bracket.qualifying3rdGroups.has(g.letter) ? "Meilleur 3e" : "Éliminé";
+      else qualif = "Éliminé";
+      standingsRows.push([g.letter, rank, t.name, t.played, t.w, t.d, t.l, t.gf, t.ga, t.gd, t.pts, qualif]);
+    });
+  });
+  const wsStandings = XLSX.utils.aoa_to_sheet(standingsRows);
+  wsStandings["!cols"] = [{wch:8},{wch:6},{wch:22},{wch:5},{wch:5},{wch:5},{wch:5},{wch:5},{wch:5},{wch:6},{wch:5},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, wsStandings, "Classements");
+
+  const koRows = [["Tour", "Match", "Équipe 1", "Équipe 2", "Vainqueur prédit"]];
+  function pushKO(label, matchLabel, m, pickIdx) {
+    let winner = "";
+    if (pickIdx === 0) winner = m.home.name || "";
+    else if (pickIdx === 1) winner = m.away.name || "";
+    koRows.push([label, matchLabel, m.home.name || ("(" + m.home.label + ")"), m.away.name || ("(" + m.away.label + ")"), winner]);
+  }
+  bracket.r32.forEach((m, i) => pushKO("16e de finale", "16e #" + (i+1), m, player.knockout.r32[i]));
+  bracket.r16.forEach((m, i) => pushKO("8e de finale", "8e #" + (i+1), m, player.knockout.r16[i]));
+  bracket.qf.forEach((m, i) => pushKO("Quart de finale", "Q" + (i+1), m, player.knockout.qf[i]));
+  bracket.sf.forEach((m, i) => pushKO("Demi-finale", "Demi " + (i+1), m, player.knockout.sf[i]));
+  pushKO("Match 3e place", "3e place", bracket.third, player.knockout.third);
+  pushKO("Finale", "FINALE", bracket.final, player.knockout.final);
+  const wsKO = XLSX.utils.aoa_to_sheet(koRows);
+  wsKO["!cols"] = [{wch:18},{wch:10},{wch:26},{wch:26},{wch:24}];
+  XLSX.utils.book_append_sheet(wb, wsKO, "Phase finale");
+
+  const safeName = (player.name || "anonyme").replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 20);
+  const date = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `pronostic_cdm2026_${safeName}_${date}.xlsx`);
+}
+
+// ============ IMPORT EXCEL ============
+const IMPORT_PLACEHOLDERS = new Set(["(non renseigné)", "(non choisi)", ""]);
+
+function importCleanVal(v) {
+  const s = String(v == null ? "" : v).trim();
+  return IMPORT_PLACEHOLDERS.has(s) ? "" : s;
+}
+
+function importSheetRows(wb, name) {
+  const ws = wb.Sheets[name];
+  if (!ws) return null;
+  return XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+}
+
+// Met les choix d'un tour de phase finale en faisant correspondre les noms
+// des vainqueurs lus dans l'Excel aux équipes calculées. Retourne le nb de choix posés.
+function importApplyRound(round, winnerNames) {
+  if (!winnerNames || !winnerNames.length) return 0;
+  const b = computeBracket(player);
+  const matches = b[round];
+  let count = 0;
+  matches.forEach((m, i) => {
+    const w = winnerNames[i];
+    if (!w) return;
+    if (m.home.name === w) { player.knockout[round][i] = 0; count++; }
+    else if (m.away.name === w) { player.knockout[round][i] = 1; count++; }
+  });
+  return count;
+}
+
+// Reconstruit l'état "player" à partir d'un classeur exporté par cet outil
+function importApplyWorkbook(wb) {
+  const calRows = importSheetRows(wb, "Calendrier & scores");
+  if (!calRows) {
+    return { ok: false, message: "Onglet « Calendrier & scores » introuvable.\nImportez un fichier .xlsx exporté par cet outil." };
+  }
+
+  // Repart d'un joueur vierge
+  player = emptyPlayer();
+  const summary = { name: "", topScorer: "", scores: 0, koPicks: 0 };
+
+  // ---- Résumé : nom + meilleur buteur ----
+  const sumRows = importSheetRows(wb, "Résumé");
+  if (sumRows) {
+    sumRows.forEach(r => {
+      const key = String(r[0] || "").trim();
+      const val = importCleanVal(r[1]);
+      if (key === "Nom") { player.name = val; summary.name = val; }
+      if (key === "Meilleur buteur") { player.topScorer = val; summary.topScorer = val; }
+    });
+  }
+
+  // ---- Scores de groupe ---- (tolérant à l'inversion domicile/extérieur)
+  const lookup = {};
+  SCHEDULE.forEach(m => {
+    lookup[m.group + "|" + m.home + "|" + m.away] = { m, swap: false };
+    lookup[m.group + "|" + m.away + "|" + m.home] = { m, swap: true };
+  });
+
+  for (let i = 1; i < calRows.length; i++) {
+    const row = calRows[i];
+    if (!row || row.length === 0) continue;
+    const grp = String(row[0] || "").trim();
+    const home = String(row[3] || "").trim();
+    const sh = row[4], sa = row[5];
+    const away = String(row[6] || "").trim();
+    const entry = lookup[grp + "|" + home + "|" + away];
+    if (!entry) continue;
+    let hNum = (sh === "" || sh === null || sh === undefined) ? null : parseInt(sh);
+    let aNum = (sa === "" || sa === null || sa === undefined) ? null : parseInt(sa);
+    if (hNum !== null && !isNaN(hNum) && aNum !== null && !isNaN(aNum)) {
+      if (entry.swap) { const t = hNum; hNum = aNum; aNum = t; }
+      player.groupScores[grp][entry.m.matchIdx] = { h: hNum, a: aNum };
+      summary.scores++;
+    }
+  }
+
+  // ---- Phase finale : reconstruire les choix tour par tour ----
+  const koRows = importSheetRows(wb, "Phase finale");
+  if (koRows) {
+    const winners = { r32: [], r16: [], qf: [], sf: [], third: null, final: null };
+    for (let i = 1; i < koRows.length; i++) {
+      const row = koRows[i];
+      if (!row) continue;
+      const tour = String(row[0] || "").trim();
+      const winner = importCleanVal(row[4]);
+      if (tour === "16e de finale") winners.r32.push(winner);
+      else if (tour === "8e de finale") winners.r16.push(winner);
+      else if (tour === "Quart de finale") winners.qf.push(winner);
+      else if (tour === "Demi-finale") winners.sf.push(winner);
+      else if (tour === "Match 3e place") winners.third = winner;
+      else if (tour === "Finale") winners.final = winner;
+    }
+
+    // L'ordre est important : chaque tour dépend des choix du tour précédent
+    summary.koPicks += importApplyRound("r32", winners.r32);
+    summary.koPicks += importApplyRound("r16", winners.r16);
+    summary.koPicks += importApplyRound("qf", winners.qf);
+    summary.koPicks += importApplyRound("sf", winners.sf);
+
+    // 3e place et finale : nécessitent les demi-finales résolues
+    const b = computeBracket(player);
+    if (winners.third) {
+      if (b.third.home.name === winners.third) { player.knockout.third = 0; summary.koPicks++; }
+      else if (b.third.away.name === winners.third) { player.knockout.third = 1; summary.koPicks++; }
+    }
+    if (winners.final) {
+      if (b.final.home.name === winners.final) { player.knockout.final = 0; summary.koPicks++; }
+      else if (b.final.away.name === winners.final) { player.knockout.final = 1; summary.koPicks++; }
+    }
+  }
+
+  return { ok: true, summary };
+}
+
+function importExcel(file) {
+  if (typeof XLSX === "undefined") {
+    alert("La bibliothèque Excel n'a pas pu être chargée.");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: "array" });
+      const result = importApplyWorkbook(wb);
+      if (result.ok) {
+        renderAll();
+        saveData();
+        const s = result.summary;
+        alert(
+          "Import réussi ✓\n\n" +
+          "Joueur : " + (s.name || "(non renseigné)") + "\n" +
+          "Meilleur buteur : " + (s.topScorer || "(non renseigné)") + "\n" +
+          "Scores de matchs importés : " + s.scores + " / 72\n" +
+          "Choix de phase finale restaurés : " + s.koPicks
+        );
+      } else {
+        alert(result.message || "Fichier non reconnu.");
+      }
+    } catch (err) {
+      alert("Erreur lors de la lecture du fichier :\n" + err.message);
+    }
+  };
+  reader.onerror = () => alert("Impossible de lire le fichier.");
+  reader.readAsArrayBuffer(file);
+}
+
+
+
+// ============ EXPORT JSON (à envoyer à l'organisateur) ============
+function safePrenom() {
+  return (player.name || "anonyme").trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30) || "anonyme";
+}
+function exportJSON() {
+  if (!player.name || !player.name.trim()) {
+    alert("Indique d'abord ton prénom en haut de la page : il sert de nom de fichier et t'identifie dans le classement.");
+    document.getElementById("nameInput").focus();
+    return;
+  }
+  const blob = new Blob([JSON.stringify(player, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = safePrenom() + ".json";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ============ INIT ============
+function renderAll() {
+  const bracket = computeBracket(player);
+  document.getElementById("nameInput").value = player.name;
+  document.getElementById("topScorerInput").value = player.topScorer;
+  renderGroupsGrid(bracket);
+  renderCalendarFilters();
+  renderCalendar();
+  renderBracketTree(bracket);
+  renderThirdPlace(bracket);
+  updateChampionDisplay(bracket);
+}
+
+function escapeAttr(s) { return escapeHtml(s); }
+
+document.getElementById("nameInput").addEventListener("input", (e) => {
+  player.name = e.target.value;
+  scheduleSave();
+});
+document.getElementById("topScorerInput").addEventListener("input", (e) => {
+  player.topScorer = e.target.value;
+  scheduleSave();
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (!confirm("Effacer tous vos pronostics ?")) return;
+  const preservedName = player.name;
+  player = emptyPlayer();
+  player.name = preservedName;
+  renderAll();
+  scheduleSave();
+});
+document.getElementById("exportBtnTop").addEventListener("click", exportExcel);
+var _ej = document.getElementById("exportJsonBtn"); if (_ej) _ej.addEventListener("click", exportJSON);
+var _ej2 = document.getElementById("exportJsonBtnBottom"); if (_ej2) _ej2.addEventListener("click", exportJSON);
+document.getElementById("exportBtnBottom").addEventListener("click", exportExcel);
+
+function wireImportButton(btnId) {
+  const btn = document.getElementById(btnId);
+  if (btn) btn.addEventListener("click", () => {
+    document.getElementById("importFileInput").click();
+  });
+}
+wireImportButton("importBtnTop");
+wireImportButton("importBtnBottom");
+document.getElementById("importFileInput").addEventListener("change", (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  if (!confirm("Importer ce fichier remplacera tous vos pronostics actuels.\nContinuer ?")) {
+    e.target.value = "";
+    return;
+  }
+  importExcel(file);
+  e.target.value = ""; // permet de réimporter le même fichier
+});
+
+loadData();
+</script>
+</body>
+</html>
