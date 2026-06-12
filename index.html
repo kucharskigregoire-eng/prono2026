@@ -147,6 +147,7 @@ function renderClassement() {
 }
 
 // ============ COMPARATIF PAR MATCH ============
+// Renvoie le score réel uniquement si les deux valeurs sont des nombres (pas null).
 function realScore(group, matchIdx) {
   const arr = DATA.actual.groupScores[group];
   if (!arr) return null;
@@ -171,10 +172,13 @@ function renderMatchs() {
       const realHtml = real
         ? `<span class="cmp-real">${real.h} – ${real.a}</span>`
         : `<span class="cmp-real pending">à jouer</span>`;
+
       let preds = "";
       if (!real) {
+        // Match pas encore joué : on masque tous les pronos
         preds = `<span class="muted-row">🔒 Pronos masqués jusqu'à la fin du match.</span>`;
       } else {
+        // Match joué : on affiche les pronos avec les points
         DATA.players.forEach(p => {
           const arr = p.groupScores[m.group] || [];
           const s = arr[m.matchIdx];
@@ -187,6 +191,7 @@ function renderMatchs() {
         });
         if (!preds) preds = `<span class="muted-row">Aucun prono saisi pour ce match.</span>`;
       }
+
       html += `<div class="cmp-match">
         <div class="cmp-head">
           <div class="cmp-teams">
