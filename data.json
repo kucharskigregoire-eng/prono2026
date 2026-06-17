@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-16T07:50:11.379Z",
+  "updatedAt": "2026-06-17T07:02:43.100Z",
   "actual": {
     "groupScores": {
       "A": [
@@ -212,12 +212,12 @@
       ],
       "I": [
         {
-          "h": null,
-          "a": null
+          "h": 3,
+          "a": 1
         },
         {
-          "h": null,
-          "a": null
+          "h": 0,
+          "a": 4
         },
         {
           "h": null,
@@ -238,12 +238,12 @@
       ],
       "J": [
         {
-          "h": null,
-          "a": null
+          "h": 3,
+          "a": 0
         },
         {
-          "h": null,
-          "a": null
+          "h": 3,
+          "a": 1
         },
         {
           "h": null,
@@ -2839,366 +2839,6 @@
       }
     },
     {
-      "name": "Grégoire",
-      "topScorer": "Mbappé",
-      "groupScores": {
-        "A": [
-          {
-            "h": 2,
-            "a": 1
-          },
-          {
-            "h": 2,
-            "a": 0
-          },
-          {
-            "h": 2,
-            "a": 1
-          },
-          {
-            "h": 2,
-            "a": 2
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          }
-        ],
-        "B": [
-          {
-            "h": 2,
-            "a": 0
-          },
-          {
-            "h": 0,
-            "a": 2
-          },
-          {
-            "h": 3,
-            "a": 0
-          },
-          {
-            "h": 2,
-            "a": 0
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          }
-        ],
-        "C": [
-          {
-            "h": 1,
-            "a": 1
-          },
-          {
-            "h": 0,
-            "a": 1
-          },
-          {
-            "h": 0,
-            "a": 2
-          },
-          {
-            "h": 3,
-            "a": 0
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          }
-        ],
-        "D": [
-          {
-            "h": 2,
-            "a": 1
-          },
-          {
-            "h": 0,
-            "a": 2
-          },
-          {
-            "h": 2,
-            "a": 1
-          },
-          {
-            "h": 3,
-            "a": 2
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          }
-        ],
-        "E": [
-          {
-            "h": 4,
-            "a": 0
-          },
-          {
-            "h": 1,
-            "a": 1
-          },
-          {
-            "h": 0,
-            "a": 1
-          },
-          {
-            "h": 3,
-            "a": 0
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          }
-        ],
-        "F": [
-          {
-            "h": 2,
-            "a": 1
-          },
-          {
-            "h": 1,
-            "a": 2
-          },
-          {
-            "h": 2,
-            "a": 0
-          },
-          {
-            "h": 1,
-            "a": 2
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          }
-        ],
-        "G": [
-          {
-            "h": 2,
-            "a": 2
-          },
-          {
-            "h": 0,
-            "a": 0
-          },
-          {
-            "h": 3,
-            "a": 0
-          },
-          {
-            "h": 0,
-            "a": 2
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          }
-        ],
-        "H": [
-          {
-            "h": 5,
-            "a": 0
-          },
-          {
-            "h": 2,
-            "a": 1
-          },
-          {
-            "h": 3,
-            "a": 0
-          },
-          {
-            "h": 3,
-            "a": 1
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          }
-        ],
-        "I": [
-          {
-            "h": 3,
-            "a": 1
-          },
-          {
-            "h": 0,
-            "a": 2
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          }
-        ],
-        "J": [
-          {
-            "h": 2,
-            "a": 1
-          },
-          {
-            "h": 0,
-            "a": 0
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          }
-        ],
-        "K": [
-          {
-            "h": 2,
-            "a": 1
-          },
-          {
-            "h": 0,
-            "a": 3
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          }
-        ],
-        "L": [
-          {
-            "h": 3,
-            "a": 0
-          },
-          {
-            "h": 1,
-            "a": 1
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          }
-        ]
-      },
-      "knockout": {
-        "r32": [
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-        ],
-        "r16": [
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-        ],
-        "qf": [
-          null,
-          null,
-          null,
-          null
-        ],
-        "sf": [
-          null,
-          null
-        ],
-        "final": null,
-        "third": null
-      }
-    },
-    {
       "name": "Vincent",
       "topScorer": "Lamine Yamal",
       "groupScores": {
@@ -4232,6 +3872,366 @@
           {
             "h": 1,
             "a": 1
+          }
+        ]
+      },
+      "knockout": {
+        "r32": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "r16": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "qf": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sf": [
+          null,
+          null
+        ],
+        "final": null,
+        "third": null
+      }
+    },
+    {
+      "name": "Grégoire",
+      "topScorer": "Mbappé",
+      "groupScores": {
+        "A": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "B": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "C": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "D": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 2
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "E": [
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "F": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "G": [
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "H": [
+          {
+            "h": 5,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "I": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "J": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "K": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "L": [
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
           }
         ]
       },
