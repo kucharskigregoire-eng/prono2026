@@ -1,1006 +1,4282 @@
-Option Explicit
-
-Private Const C_DATE As Long = 1
-Private Const C_ART As Long = 2
-Private Const C_DESIG As Long = 3
-Private Const C_FOUR As Long = 4
-Private Const C_CODEFOUR As Long = 5
-Private Const C_FAM As Long = 6
-Private Const C_GAMME As Long = 7
-Private Const C_QTE As Long = 8
-Private Const C_PRIX As Long = 9
-Private Const C_STD As Long = 10
-
-Private dPMP As Object
-Private dRef2024 As Object
-Private dQte2024 As Object
-Private dCoupleSerie As Object
-Private dArtFam As Object
-Private dArtFour As Object
-
-Private Function MonthKey(ByVal v As Variant) As String
-    Dim s As String, parts() As String
-    Dim d As Long, m As Long, y As Long
-    
-    MonthKey = ""
-    If IsEmpty(v) Or v = "" Then Exit Function
-    
-    If IsDate(v) Then
-        MonthKey = Format(CDate(v), "yyyy-mm")
-        Exit Function
-    End If
-    
-    s = Trim(CStr(v))
-    s = Replace(Replace(s, "-", "/"), ".", "/")
-    
-    If InStr(s, "/") > 0 Then
-        parts = Split(s, "/")
-        
-        If UBound(parts) = 2 Then
-            d = Val(parts(0))
-            m = Val(parts(1))
-            y = Val(parts(2))
-            
-            If y < 100 Then
-                If y < 70 Then
-                    y = y + 2000
-                Else
-                    y = y + 1900
-                End If
-            End If
-            
-            If m >= 1 And m <= 12 Then
-                MonthKey = Format(y, "0000") & "-" & Format(m, "00")
-            End If
-            
-        ElseIf UBound(parts) = 1 Then
-            m = Val(parts(0))
-            y = Val(parts(1))
-            
-            If y < 100 Then y = y + 2000
-            
-            If m >= 1 And m <= 12 Then
-                MonthKey = Format(y, "0000") & "-" & Format(m, "00")
-            End If
-        End If
-    End If
-End Function
-
-Private Function ToNum(ByVal v As Variant) As Double
-    Dim s As String
-    
-    On Error GoTo fail
-    
-    If IsNumeric(v) Then
-        ToNum = CDbl(v)
-        Exit Function
-    End If
-    
-    s = Trim(CStr(v))
-    s = Replace(s, " ", "")
-    s = Replace(s, Chr(160), "")
-    s = Replace(s, ",", ".")
-    
-    If IsNumeric(s) Then
-        ToNum = CDbl(s)
-    Else
-        ToNum = 0
-    End If
-    Exit Function
-    
-fail:
-    ToNum = 0
-End Function
-
-Private Function LireDonnees(ByVal nomFeuille As String, ByRef arr As Variant) As Long
-    Dim ws As Worksheet
-    Dim lastRow As Long
-    
-    On Error Resume Next
-    Set ws = ThisWorkbook.Worksheets(nomFeuille)
-    On Error GoTo 0
-    
-    If ws Is Nothing Then
-        LireDonnees = 0
-        Exit Function
-    End If
-    
-    lastRow = ws.Cells(ws.Rows.Count, C_ART).End(xlUp).Row
-    If lastRow < 2 Then
-        LireDonnees = 0
-        Exit Function
-    End If
-    
-    arr = ws.Range(ws.Cells(2, 1), ws.Cells(lastRow, C_STD)).Value
-    LireDonnees = lastRow - 1
-End Function
-
-Private Function Param(ByVal nom As String) As Variant
-    On Error Resume Next
-    Param = ThisWorkbook.Names(nom).RefersToRange.Value
-    On Error GoTo 0
-End Function
-
-Private Sub ViderFeuille(ByVal nom As String)
-    Dim ws As Worksheet
-    
-    On Error Resume Next
-    Set ws = ThisWorkbook.Worksheets(nom)
-    On Error GoTo 0
-    
-    If Not ws Is Nothing Then ws.Cells.Clear
-End Sub
-
-Private Function CalcPente(ByRef y() As Double, ByVal n As Long) As Double
-    Dim i As Long
-    Dim sx As Double, sy As Double, sxy As Double, sxx As Double
-    Dim mx As Double, my As Double
-    
-    If n < 2 Then
-        CalcPente = 0
-        Exit Function
-    End If
-    
-    For i = 0 To n - 1
-        sx = sx + i
-        sy = sy + y(i)
-    Next i
-    
-    mx = sx / n
-    my = sy / n
-    
-    For i = 0 To n - 1
-        sxy = sxy + (i - mx) * (y(i) - my)
-        sxx = sxx + (i - mx) * (i - mx)
-    Next i
-    
-    If sxx = 0 Then
-        CalcPente = 0
-    Else
-        CalcPente = sxy / sxx
-    End If
-End Function
-
-Private Sub CalculerRef2024()
-    Dim arr As Variant, n As Long, i As Long
-    Dim accCV As Object, accCQ As Object, accNb As Object
-    Dim accLast As Object, accLastMk As Object
-    Dim art As String, mk As String
-    Dim p As Double, q As Double
-    Dim k As Variant
-    
-    Set dRef2024 = CreateObject("Scripting.Dictionary")
-    Set dQte2024 = CreateObject("Scripting.Dictionary")
-    
-    n = LireDonnees("Donnees 2024", arr)
-    If n = 0 Then Exit Sub
-    
-    Set accCV = CreateObject("Scripting.Dictionary")
-    Set accCQ = CreateObject("Scripting.Dictionary")
-    Set accNb = CreateObject("Scripting.Dictionary")
-    Set accLast = CreateObject("Scripting.Dictionary")
-    Set accLastMk = CreateObject("Scripting.Dictionary")
-    
-    For i = 1 To n
-        art = Trim(CStr(arr(i, C_ART)))
-        mk = MonthKey(arr(i, C_DATE))
-        
-        If art <> "" And Left$(mk, 4) = "2024" Then
-            p = ToNum(arr(i, C_PRIX))
-            q = ToNum(arr(i, C_QTE))
-            
-            If p > 0 And q > 0 Then
-                accCV(art) = accCV(art) + p * q
-                accCQ(art) = accCQ(art) + q
-                accNb(art) = accNb(art) + 1
-                
-                If mk >= "2024-09" Then
-                    If Not accLastMk.Exists(art) Then
-                        accLast(art) = p
-                        accLastMk(art) = mk
-                    ElseIf mk >= accLastMk(art) Then
-                        accLast(art) = p
-                        accLastMk(art) = mk
-                    End If
-                End If
-            End If
-        End If
-    Next i
-    
-    For Each k In accCQ.Keys
-        dQte2024(k) = accCQ(k)
-        
-        If accNb(k) >= 2 And accCQ(k) > 0 Then
-            dRef2024(k) = accCV(k) / accCQ(k)
-        ElseIf accLast.Exists(k) Then
-            dRef2024(k) = accLast(k)
-        ElseIf accCQ(k) > 0 Then
-            dRef2024(k) = accCV(k) / accCQ(k)
-        End If
-    Next k
-End Sub
-
-Private Sub CalculerSeriesPMP()
-    Dim arr As Variant, n As Long, i As Long
-    Dim artMoisCV As Object, artMoisCQ As Object
-    Dim cplCV As Object, cplCQ As Object
-    Dim artMois As Object, cplMois As Object
-    
-    Dim art As String, four As String, fam As String, mk As String
-    Dim p As Double, q As Double
-    Dim keyAM As String, keyCM As String, cpl As String
-    
-    Dim a As Variant, c As Variant
-    Dim moisArr() As String
-    Dim j As Long
-    Dim cv As Double, cq As Double
-    Dim serie As String
-    Dim poids As Double
-    
-    n = LireDonnees("Donnees 2025", arr)
-    
-    Set dPMP = CreateObject("Scripting.Dictionary")
-    Set dCoupleSerie = CreateObject("Scripting.Dictionary")
-    Set dArtFam = CreateObject("Scripting.Dictionary")
-    Set dArtFour = CreateObject("Scripting.Dictionary")
-    
-    If n = 0 Then Exit Sub
-    
-    Set artMoisCV = CreateObject("Scripting.Dictionary")
-    Set artMoisCQ = CreateObject("Scripting.Dictionary")
-    Set cplCV = CreateObject("Scripting.Dictionary")
-    Set cplCQ = CreateObject("Scripting.Dictionary")
-    Set artMois = CreateObject("Scripting.Dictionary")
-    Set cplMois = CreateObject("Scripting.Dictionary")
-    
-    For i = 1 To n
-        art = Trim(CStr(arr(i, C_ART)))
-        mk = MonthKey(arr(i, C_DATE))
-        
-        If art = "" Or Left$(mk, 4) <> "2025" Then GoTo suite
-        
-        p = ToNum(arr(i, C_PRIX))
-        q = ToNum(arr(i, C_QTE))
-        
-        If p <= 0 Or q <= 0 Then GoTo suite
-        
-        four = Trim(CStr(arr(i, C_FOUR)))
-        If four = "" Then four = "(inconnu)"
-        
-        fam = Trim(CStr(arr(i, C_FAM)))
-        If fam = "" Then fam = four
-        
-        dArtFam(art) = fam
-        
-        If Not dArtFour.Exists(art) Then
-            dArtFour(art) = four
-        ElseIf InStr(1, ";" & dArtFour(art) & ";", ";" & four & ";", vbTextCompare) = 0 Then
-            dArtFour(art) = dArtFour(art) & ";" & four
-        End If
-        
-        keyAM = art & "|" & mk
-        artMoisCV(keyAM) = artMoisCV(keyAM) + p * q
-        artMoisCQ(keyAM) = artMoisCQ(keyAM) + q
-        
-        If Not artMois.Exists(art) Then
-            artMois(art) = mk
-        Else
-            If InStr(1, "|" & artMois(art) & "|", "|" & mk & "|", vbTextCompare) = 0 Then
-                artMois(art) = artMois(art) & "|" & mk
-            End If
-        End If
-        
-        cpl = art & "||" & four
-        keyCM = cpl & "|" & mk
-        cplCV(keyCM) = cplCV(keyCM) + p * q
-        cplCQ(keyCM) = cplCQ(keyCM) + q
-        
-        If Not cplMois.Exists(cpl) Then
-            cplMois(cpl) = mk
-        Else
-            If InStr(1, "|" & cplMois(cpl) & "|", "|" & mk & "|", vbTextCompare) = 0 Then
-                cplMois(cpl) = cplMois(cpl) & "|" & mk
-            End If
-        End If
-        
-suite:
-    Next i
-    
-    For Each a In artMois.Keys
-        moisArr = Split(artMois(a), "|")
-        TriBulle moisArr
-        
-        cv = 0
-        cq = 0
-        
-        If Not dRef2024 Is Nothing Then
-            If dRef2024.Exists(a) Then
-                poids = 1
-                If Not dQte2024 Is Nothing Then
-                    If dQte2024.Exists(a) Then poids = dQte2024(a)
-                End If
-                If poids <= 0 Then poids = 1
-                
-                cv = dRef2024(a) * poids
-                cq = poids
-            End If
-        End If
-        
-        serie = ""
-        For j = 0 To UBound(moisArr)
-            keyAM = a & "|" & moisArr(j)
-            cv = cv + artMoisCV(keyAM)
-            cq = cq + artMoisCQ(keyAM)
-            
-            If cq > 0 Then
-                serie = serie & IIf(serie = "", "", "|") & moisArr(j) & ";" & (cv / cq)
-            End If
-        Next j
-        
-        dPMP(a) = serie
-    Next a
-    
-    For Each c In cplMois.Keys
-        moisArr = Split(cplMois(c), "|")
-        TriBulle moisArr
-        
-        serie = ""
-        For j = 0 To UBound(moisArr)
-            keyCM = c & "|" & moisArr(j)
-            If cplCQ(keyCM) > 0 Then
-                serie = serie & IIf(serie = "", "", "|") & moisArr(j) & ";" & (cplCV(keyCM) / cplCQ(keyCM))
-            End If
-        Next j
-        
-        dCoupleSerie(c) = serie
-    Next c
-End Sub
-
-Private Sub TriBulle(ByRef a() As String)
-    Dim i As Long, j As Long
-    Dim tmp As String
-    
-    For i = LBound(a) To UBound(a) - 1
-        For j = i + 1 To UBound(a)
-            If a(j) < a(i) Then
-                tmp = a(i)
-                a(i) = a(j)
-                a(j) = tmp
-            End If
-        Next j
-    Next i
-End Sub
-
-Public Sub Btn_ToutLancer()
-    Application.ScreenUpdating = False
-    Application.Calculation = xlCalculationManual
-    
-    CalculerRef2024
-    CalculerSeriesPMP
-    RemplirPMP
-    RemplirDerives
-    RemplirChocs
-    RemplirClassement
-    RemplirPilotage
-    
-    Application.Calculation = xlCalculationAutomatic
-    Application.ScreenUpdating = True
-    
-    MsgBox "Toutes les analyses sont a jour.", vbInformation
-End Sub
-
-Public Sub Btn_CalculerPMP()
-    Application.ScreenUpdating = False
-    
-    CalculerRef2024
-    CalculerSeriesPMP
-    RemplirPMP
-    
-    Application.ScreenUpdating = True
-    MsgBox "Feuille PMP mise a jour.", vbInformation
-End Sub
-
-Public Sub Btn_DetecterDerives()
-    If dCoupleSerie Is Nothing Or dPMP Is Nothing Then
-        CalculerRef2024
-        CalculerSeriesPMP
-    End If
-    RemplirDerives
-    MsgBox "Feuille Derives mise a jour.", vbInformation
-End Sub
-
-Public Sub Btn_DetecterChocs()
-    If dPMP Is Nothing Then
-        CalculerRef2024
-        CalculerSeriesPMP
-    End If
-    RemplirChocs
-    MsgBox "Feuille Chocs PMP mise a jour.", vbInformation
-End Sub
-
-Public Sub Btn_ClasserProfils()
-    If dPMP Is Nothing Then
-        CalculerRef2024
-        CalculerSeriesPMP
-    End If
-    RemplirClassement
-    MsgBox "Feuille Classement mise a jour.", vbInformation
-End Sub
-
-Public Sub Btn_PilotageMensuel()
-    If dPMP Is Nothing Then
-        CalculerRef2024
-        CalculerSeriesPMP
-    End If
-    RemplirPilotage
-    MsgBox "Feuille Pilotage mise a jour.", vbInformation
-End Sub
-
-Private Sub PoserEntete(ws As Worksheet, ByRef titres As Variant)
-    Dim j As Long
-    
-    For j = 0 To UBound(titres)
-        With ws.Cells(1, j + 1)
-            .Value = titres(j)
-            .Font.Bold = True
-            .Font.Color = RGB(255, 255, 255)
-            .Interior.Color = RGB(31, 58, 95)
-        End With
-    Next j
-    
-    ws.Rows(1).WrapText = True
-End Sub
-
-Private Sub RemplirPMP()
-    Dim ws As Worksheet
-    Dim a As Variant
-    Dim parts() As String, mois() As String
-    Dim lastVal As Double, refv As Variant
-    Dim r As Long
-    Dim seriePMP As String, derniere As String
-    
-    ViderFeuille "PMP"
-    Set ws = ThisWorkbook.Worksheets("PMP")
-    
-    PoserEntete ws, Array("N article", "Famille", "Fournisseurs", "PMP ref 31/12/2024", _
-                          "PMP courant 2025", "Nb mois 2025", "Variation PMP vs ref (%)")
-    
-    r = 2
-    
-    For Each a In dPMP.Keys
-        seriePMP = dPMP(a)
-        mois = Split(seriePMP, "|")
-        derniere = mois(UBound(mois))
-        parts = Split(derniere, ";")
-        lastVal = CDbl(parts(1))
-        
-        refv = Empty
-        If Not dRef2024 Is Nothing Then
-            If dRef2024.Exists(a) Then refv = dRef2024(a)
-        End If
-        
-        ws.Cells(r, 1).Value = a
-        ws.Cells(r, 2).Value = dArtFam(a)
-        ws.Cells(r, 3).Value = dArtFour(a)
-        
-        If IsEmpty(refv) Then
-            ws.Cells(r, 4).Value = ""
-        Else
-            ws.Cells(r, 4).Value = Round(refv, 4)
-        End If
-        
-        ws.Cells(r, 5).Value = Round(lastVal, 4)
-        ws.Cells(r, 6).Value = UBound(mois) + 1
-        
-        If Not IsEmpty(refv) Then
-            If refv > 0 Then
-                ws.Cells(r, 7).Value = Round((lastVal - refv) / refv * 100, 2)
-            End If
-        End If
-        
-        r = r + 1
-    Next a
-    
-    ws.Columns.AutoFit
-    ws.Range("A1").Select
-End Sub
-
-Private Sub RemplirDerives()
-    Dim ws As Worksheet
-    Dim c As Variant
-    Dim parts() As String, mois() As String, sp() As String
-    Dim inflRef As Double, seuil As Double, refPente As Double
-    Dim r As Long, n As Long, j As Long
-    Dim ind() As Double, base As Double
-    Dim penteVal As Double, surcroit As Double, vartot As Double
-    Dim ar As String, fo As String
-    
-    ViderFeuille "Derives"
-    Set ws = ThisWorkbook.Worksheets("Derives")
-    
-    PoserEntete ws, Array("N article", "Fournisseur", "Famille", "Nb mois", _
-                          "Pente (pts/mois)", "Surcroit derive (net inflation)", _
-                          "Variation totale (%)", "Alerte")
-    
-    inflRef = ToNum(Param("infl_ref"))
-    seuil = ToNum(Param("seuil_derive"))
-    refPente = inflRef
-    
-    r = 2
-    
-    For Each c In dCoupleSerie.Keys
-        mois = Split(dCoupleSerie(c), "|")
-        n = UBound(mois) + 1
-        
-        If n < 3 Then GoTo suivant
-        
-        ReDim ind(0 To n - 1)
-        
-        parts = Split(mois(0), ";")
-        base = CDbl(parts(1))
-        If base <= 0 Then GoTo suivant
-        
-        For j = 0 To n - 1
-            parts = Split(mois(j), ";")
-            ind(j) = CDbl(parts(1)) / base * 100
-        Next j
-        
-        penteVal = CalcPente(ind, n)
-        surcroit = penteVal - refPente
-        vartot = ind(n - 1) - 100
-        
-        sp = Split(c, "||")
-        ar = sp(0)
-        fo = sp(1)
-        
-        ws.Cells(r, 1).Value = ar
-        ws.Cells(r, 2).Value = fo
-        ws.Cells(r, 3).Value = dArtFam(ar)
-        ws.Cells(r, 4).Value = n
-        ws.Cells(r, 5).Value = Round(penteVal, 2)
-        ws.Cells(r, 6).Value = Round(surcroit, 2)
-        ws.Cells(r, 7).Value = Round(vartot, 1)
-        
-        If surcroit > seuil Then
-            ws.Cells(r, 8).Value = "OUI"
-            ws.Cells(r, 8).Interior.Color = RGB(198, 40, 40)
-            ws.Cells(r, 8).Font.Color = RGB(255, 255, 255)
-        Else
-            ws.Cells(r, 8).Value = "-"
-        End If
-        
-        r = r + 1
-        
-suivant:
-    Next c
-    
-    If r > 3 Then
-        ws.Range(ws.Cells(1, 1), ws.Cells(r - 1, 8)).Sort _
-            Key1:=ws.Cells(1, 6), Order1:=xlDescending, Header:=xlYes
-    End If
-    
-    ws.Columns.AutoFit
-End Sub
-
-Private Sub RemplirChocs()
-    Dim ws As Worksheet
-    Dim a As Variant
-    Dim parts() As String, mois() As String
-    Dim seuilChoc As Double, obs As Long, tol As Double
-    Dim r As Long, n As Long, i As Long
-    Dim pmpV() As Double, mkV() As String
-    Dim lastEnd As Long, varPct As Double, pre As Double, post As Double
-    Dim finIdx As Long, statut As String, ecartFinal As Double
-    
-    ViderFeuille "Chocs PMP"
-    Set ws = ThisWorkbook.Worksheets("Chocs PMP")
-    
-    PoserEntete ws, Array("N article", "Famille", "Mois choc", "Variation (%)", _
-                          "PMP avant", "PMP apres", "Fenetre obs.", _
-                          "Ecart final vs pre (%)", "Statut")
-    
-    seuilChoc = ToNum(Param("seuil_choc"))
-    obs = CLng(ToNum(Param("fenetre_obs")))
-    tol = ToNum(Param("tol_resorption"))
-    
-    If obs < 1 Then obs = 2
-    
-    r = 2
-    
-    For Each a In dPMP.Keys
-        mois = Split(dPMP(a), "|")
-        n = UBound(mois) + 1
-        
-        If n < 2 Then GoTo suivant
-        
-        ReDim pmpV(0 To n - 1)
-        ReDim mkV(0 To n - 1)
-        
-        For i = 0 To n - 1
-            parts = Split(mois(i), ";")
-            mkV(i) = parts(0)
-            pmpV(i) = CDbl(parts(1))
-        Next i
-        
-        lastEnd = -1
-        
-        For i = 1 To n - 1
-            If i <= lastEnd Then GoTo continuer
-            
-            pre = pmpV(i - 1)
-            post = pmpV(i)
-            
-            If pre <= 0 Then GoTo continuer
-            
-            varPct = (post - pre) / pre * 100
-            
-            If Abs(varPct) >= seuilChoc Then
-                finIdx = i + obs
-                If finIdx > n - 1 Then finIdx = n - 1
-                
-                If finIdx - i < obs Then
-                    statut = "EN OBSERVATION"
-                    ecartFinal = -9999
-                Else
-                    ecartFinal = (pmpV(finIdx) - pre) / pre * 100
-                    If Abs(ecartFinal) <= tol Then
-                        statut = "RESORBE"
-                    Else
-                        statut = "CASSURE CONFIRMEE"
-                    End If
-                End If
-                
-                ws.Cells(r, 1).Value = a
-                ws.Cells(r, 2).Value = dArtFam(a)
-                ws.Cells(r, 3).Value = mkV(i)
-                ws.Cells(r, 4).Value = Round(varPct, 1)
-                ws.Cells(r, 5).Value = Round(pre, 4)
-                ws.Cells(r, 6).Value = Round(post, 4)
-                ws.Cells(r, 7).Value = mkV(i) & " -> " & mkV(finIdx)
-                
-                If ecartFinal <> -9999 Then
-                    ws.Cells(r, 8).Value = Round(ecartFinal, 1)
-                Else
-                    ws.Cells(r, 8).Value = ""
-                End If
-                
-                ws.Cells(r, 9).Value = statut
-                
-                Select Case statut
-                    Case "CASSURE CONFIRMEE"
-                        ws.Cells(r, 9).Interior.Color = RGB(198, 40, 40)
-                        ws.Cells(r, 9).Font.Color = RGB(255, 255, 255)
-                    Case "EN OBSERVATION"
-                        ws.Cells(r, 9).Interior.Color = RGB(249, 168, 37)
-                    Case "RESORBE"
-                        ws.Cells(r, 9).Interior.Color = RGB(232, 245, 233)
-                End Select
-                
-                r = r + 1
-                lastEnd = finIdx
-            End If
-            
-continuer:
-        Next i
-        
-suivant:
-    Next a
-    
-    ws.Columns.AutoFit
-End Sub
-
-Private Function SurcroitArticle(a As Variant) As Double
-    Dim mois() As String, parts() As String
-    Dim n As Long, j As Long
-    Dim ind() As Double, base As Double
-    Dim inflRef As Double
-    
-    inflRef = ToNum(Param("infl_ref"))
-    
-    mois = Split(dPMP(a), "|")
-    n = UBound(mois) + 1
-    
-    If n < 3 Then
-        SurcroitArticle = -9999
-        Exit Function
-    End If
-    
-    ReDim ind(0 To n - 1)
-    
-    parts = Split(mois(0), ";")
-    base = CDbl(parts(1))
-    
-    If base <= 0 Then
-        SurcroitArticle = -9999
-        Exit Function
-    End If
-    
-    For j = 0 To n - 1
-        parts = Split(mois(j), ";")
-        ind(j) = CDbl(parts(1)) / base * 100
-    Next j
-    
-    SurcroitArticle = CalcPente(ind, n) - inflRef
-End Function
-
-Private Sub RemplirClassement()
-    Dim ws As Worksheet
-    Dim a As Variant
-    Dim r As Long
-    Dim profil As String, justif As String
-    Dim surcroit As Double
-    Dim mois() As String, parts() As String
-    Dim n As Long, pmpCourant As Double
-    Dim nFour As Long
-    
-    ViderFeuille "Classement"
-    Set ws = ThisWorkbook.Worksheets("Classement")
-    
-    PoserEntete ws, Array("N article", "Famille", "Nb fourn.", "Profil", "Justification", _
-                          "Surcroit derive", "PMP courant")
-    
-    r = 2
-    
-    For Each a In dPMP.Keys
-        mois = Split(dPMP(a), "|")
-        n = UBound(mois) + 1
-        parts = Split(mois(n - 1), ";")
-        pmpCourant = CDbl(parts(1))
-        nFour = UBound(Split(dArtFour(a), ";")) + 1
-        
-        ClasserUn a, n, profil, justif, surcroit
-        
-        ws.Cells(r, 1).Value = a
-        ws.Cells(r, 2).Value = dArtFam(a)
-        ws.Cells(r, 3).Value = nFour
-        ws.Cells(r, 4).Value = profil
-        ws.Cells(r, 5).Value = justif
-        
-        If surcroit <> -9999 Then
-            ws.Cells(r, 6).Value = Round(surcroit, 2)
-        Else
-            ws.Cells(r, 6).Value = ""
-        End If
-        
-        ws.Cells(r, 7).Value = Round(pmpCourant, 4)
-        r = r + 1
-    Next a
-    
-    ws.Columns.AutoFit
-End Sub
-
-Private Sub ClasserUn(a As Variant, n As Long, ByRef profil As String, ByRef justif As String, ByRef surcroit As Double)
-    Dim mois() As String, parts() As String
-    Dim j As Long
-    Dim pmpV() As Double
-    Dim varMax As Double, v As Double
-    Dim seuil As Double
-    Dim cassure As Boolean, mkCass As String, sautCass As Double
-    Dim moyApres As Double
-    
-    seuil = ToNum(Param("seuil_derive"))
-    surcroit = SurcroitArticle(a)
-    
-    mois = Split(dPMP(a), "|")
-    ReDim pmpV(0 To n - 1)
-    
-    For j = 0 To n - 1
-        parts = Split(mois(j), ";")
-        pmpV(j) = CDbl(parts(1))
-    Next j
-    
-    varMax = 0
-    For j = 1 To n - 1
-        If pmpV(j - 1) > 0 Then
-            v = Abs((pmpV(j) - pmpV(j - 1)) / pmpV(j - 1) * 100)
-            If v > varMax Then varMax = v
-        End If
-    Next j
-    
-    For j = 1 To n - 1
-        If pmpV(j - 1) > 0 Then
-            v = (pmpV(j) - pmpV(j - 1)) / pmpV(j - 1) * 100
-            
-            If Abs(v) >= 12 And j + 2 <= n - 1 Then
-                moyApres = (pmpV(j + 1) + pmpV(j + 2)) / 2
-                
-                If Abs(moyApres - pmpV(j)) / pmpV(j) * 100 <= 3 Then
-                    cassure = True
-                    parts = Split(mois(j), ";")
-                    mkCass = parts(0)
-                    sautCass = v
-                End If
-            End If
-        End If
-    Next j
-    
-    If cassure Then
-        profil = "Cassure"
-        justif = "Saut " & Format(sautCass, "+0") & "% en " & mkCass & " maintenu"
-        Exit Sub
-    End If
-    
-    If surcroit <> -9999 And surcroit > seuil Then
-        profil = "Derive franche"
-        justif = "Surcroit +" & Format(surcroit, "0.0") & " pts/mois net inflation"
-        Exit Sub
-    End If
-    
-    If surcroit <> -9999 And surcroit > -0.3 And surcroit < 0.5 Then
-        profil = "Inflation"
-        justif = "Pente proche inflation reference"
-        Exit Sub
-    End If
-    
-    If varMax < 3 Then
-        profil = "Stable"
-        justif = "Variation max M/M " & Format(varMax, "0.0") & "%"
-        Exit Sub
-    End If
-    
-    profil = "Variable"
-    justif = "Variation max M/M " & Format(varMax, "0.0") & "% (non classe)"
-End Sub
-
-Private Sub RemplirPilotage()
-    Dim ws As Worksheet
-    Dim a As Variant
-    Dim parts() As String, mois() As String
-    Dim sv As Double, sr As Double
-    Dim r As Long, n As Long
-    Dim pmpCourant As Double
-    Dim refv As Variant, ecPMP As Variant, ecCmd As Variant
-    Dim zone As String
-    
-    Dim arr As Variant, nn As Long, i As Long
-    Dim dDerniere As Object, dDerniereMk As Object
-    Dim art As String, mk As String, p As Double
-    
-    ViderFeuille "Pilotage"
-    Set ws = ThisWorkbook.Worksheets("Pilotage")
-    
-    PoserEntete ws, Array("N article", "Famille", "Fournisseurs", "PMP ref 31/12/2024", _
-                          "PMP courant", "Ecart PMP vs ref (%)", "Prix derniere cmd", _
-                          "Ecart cmd vs PMP (%)", "Zone")
-    
-    sv = ToNum(Param("seuil_vj"))
-    sr = ToNum(Param("seuil_jr"))
-    
-    r = 2
-    
-    Set dDerniere = CreateObject("Scripting.Dictionary")
-    Set dDerniereMk = CreateObject("Scripting.Dictionary")
-    
-    nn = LireDonnees("Donnees 2025", arr)
-    
-    For i = 1 To nn
-        art = Trim(CStr(arr(i, C_ART)))
-        mk = MonthKey(arr(i, C_DATE))
-        
-        If art <> "" And Left$(mk, 4) = "2025" Then
-            p = ToNum(arr(i, C_PRIX))
-            
-            If p > 0 Then
-                If Not dDerniereMk.Exists(art) Then
-                    dDerniere(art) = p
-                    dDerniereMk(art) = mk
-                ElseIf mk >= dDerniereMk(art) Then
-                    dDerniere(art) = p
-                    dDerniereMk(art) = mk
-                End If
-            End If
-        End If
-    Next i
-    
-    For Each a In dPMP.Keys
-        mois = Split(dPMP(a), "|")
-        n = UBound(mois) + 1
-        parts = Split(mois(n - 1), ";")
-        pmpCourant = CDbl(parts(1))
-        
-        refv = Empty
-        If Not dRef2024 Is Nothing Then
-            If dRef2024.Exists(a) Then refv = dRef2024(a)
-        End If
-        
-        ecPMP = Empty
-        ecCmd = Empty
-        
-        If Not IsEmpty(refv) Then
-            If refv > 0 Then ecPMP = (pmpCourant - refv) / refv * 100
-        End If
-        
-        If dDerniere.Exists(a) And pmpCourant > 0 Then
-            ecCmd = (dDerniere(a) - pmpCourant) / pmpCourant * 100
-        End If
-        
-        zone = ZoneDe(ecPMP, ecCmd, sv, sr)
-        
-        ws.Cells(r, 1).Value = a
-        ws.Cells(r, 2).Value = dArtFam(a)
-        ws.Cells(r, 3).Value = dArtFour(a)
-        
-        If IsEmpty(refv) Then
-            ws.Cells(r, 4).Value = ""
-        Else
-            ws.Cells(r, 4).Value = Round(refv, 4)
-        End If
-        
-        ws.Cells(r, 5).Value = Round(pmpCourant, 4)
-        
-        If IsEmpty(ecPMP) Then
-            ws.Cells(r, 6).Value = ""
-        Else
-            ws.Cells(r, 6).Value = Round(ecPMP, 2)
-        End If
-        
-        If dDerniere.Exists(a) Then
-            ws.Cells(r, 7).Value = Round(dDerniere(a), 4)
-        Else
-            ws.Cells(r, 7).Value = ""
-        End If
-        
-        If IsEmpty(ecCmd) Then
-            ws.Cells(r, 8).Value = ""
-        Else
-            ws.Cells(r, 8).Value = Round(ecCmd, 2)
-        End If
-        
-        ws.Cells(r, 9).Value = zone
-        
-        Select Case zone
-            Case "ROUGE"
-                ws.Cells(r, 9).Interior.Color = RGB(198, 40, 40)
-                ws.Cells(r, 9).Font.Color = RGB(255, 255, 255)
-            Case "JAUNE"
-                ws.Cells(r, 9).Interior.Color = RGB(249, 168, 37)
-            Case "VERTE"
-                ws.Cells(r, 9).Interior.Color = RGB(232, 245, 233)
-        End Select
-        
-        r = r + 1
-    Next a
-    
-    If r > 3 Then
-        ws.Range(ws.Cells(1, 1), ws.Cells(r - 1, 9)).Sort _
-            Key1:=ws.Cells(1, 9), Order1:=xlAscending, Header:=xlYes
-    End If
-    
-    ws.Columns.AutoFit
-End Sub
-
-Private Function ZoneDe(ec1 As Variant, ec2 As Variant, sv As Double, sr As Double) As String
-    Dim z1 As Long, z2 As Long, zmax As Long
-    
-    z1 = ZoneRang(ec1, sv, sr)
-    z2 = ZoneRang(ec2, sv, sr)
-    
-    zmax = z1
-    If z2 > zmax Then zmax = z2
-    
-    Select Case zmax
-        Case 0: ZoneDe = ""
-        Case 1: ZoneDe = "VERTE"
-        Case 2: ZoneDe = "JAUNE"
-        Case 3: ZoneDe = "ROUGE"
-    End Select
-End Function
-
-Private Function ZoneRang(ec As Variant, sv As Double, sr As Double) As Long
-    Dim a As Double
-    
-    If IsEmpty(ec) Then
-        ZoneRang = 0
-        Exit Function
-    End If
-    
-    a = Abs(CDbl(ec))
-    
-    If a <= sv Then
-        ZoneRang = 1
-    ElseIf a <= sr Then
-        ZoneRang = 2
-    Else
-        ZoneRang = 3
-    End If
-End Function
+{
+  "updatedAt": "2026-06-19T08:00:33.586Z",
+  "actual": {
+    "groupScores": {
+      "A": [
+        {
+          "h": 2,
+          "a": 0
+        },
+        {
+          "h": 2,
+          "a": 1
+        },
+        {
+          "h": 1,
+          "a": 1
+        },
+        {
+          "h": 1,
+          "a": 0
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "B": [
+        {
+          "h": 1,
+          "a": 1
+        },
+        {
+          "h": 1,
+          "a": 1
+        },
+        {
+          "h": 4,
+          "a": 1
+        },
+        {
+          "h": 6,
+          "a": 0
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "C": [
+        {
+          "h": 1,
+          "a": 1
+        },
+        {
+          "h": 1,
+          "a": 1
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "D": [
+        {
+          "h": 4,
+          "a": 1
+        },
+        {
+          "h": 2,
+          "a": 0
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "E": [
+        {
+          "h": 7,
+          "a": 1
+        },
+        {
+          "h": 1,
+          "a": 0
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "F": [
+        {
+          "h": 2,
+          "a": 2
+        },
+        {
+          "h": 5,
+          "a": 1
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "G": [
+        {
+          "h": 1,
+          "a": 1
+        },
+        {
+          "h": 2,
+          "a": 2
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "H": [
+        {
+          "h": 0,
+          "a": 0
+        },
+        {
+          "h": 1,
+          "a": 1
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "I": [
+        {
+          "h": 3,
+          "a": 1
+        },
+        {
+          "h": 0,
+          "a": 4
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "J": [
+        {
+          "h": 3,
+          "a": 0
+        },
+        {
+          "h": 3,
+          "a": 1
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "K": [
+        {
+          "h": 1,
+          "a": 1
+        },
+        {
+          "h": 1,
+          "a": 3
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "L": [
+        {
+          "h": 4,
+          "a": 2
+        },
+        {
+          "h": 1,
+          "a": 0
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ]
+    },
+    "topScorer": ""
+  },
+  "players": [
+    {
+      "name": "Nicolas",
+      "topScorer": "Olise",
+      "groupScores": {
+        "A": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          }
+        ],
+        "B": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 1
+          }
+        ],
+        "C": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 7,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 3,
+            "a": 0
+          }
+        ],
+        "D": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "E": [
+          {
+            "h": 7,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 3
+          }
+        ],
+        "F": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "G": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 2
+          }
+        ],
+        "H": [
+          {
+            "h": 5,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 0,
+            "a": 4
+          }
+        ],
+        "I": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "J": [
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "K": [
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 5,
+            "a": 0
+          },
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "L": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 2
+          }
+        ]
+      },
+      "knockout": {
+        "r32": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "r16": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "qf": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sf": [
+          null,
+          null
+        ],
+        "final": null,
+        "third": null
+      }
+    },
+    {
+      "name": "Mélanie",
+      "topScorer": "Cristiano Ronaldo",
+      "groupScores": {
+        "A": [
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          }
+        ],
+        "B": [
+          {
+            "h": 3,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "C": [
+          {
+            "h": 3,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 6,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 5,
+            "a": 0
+          }
+        ],
+        "D": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 0
+          }
+        ],
+        "E": [
+          {
+            "h": 6,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          }
+        ],
+        "F": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 1
+          }
+        ],
+        "G": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "H": [
+          {
+            "h": 5,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          }
+        ],
+        "I": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 0
+          }
+        ],
+        "J": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 5,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 4
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "K": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 4
+          },
+          {
+            "h": 5,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 4,
+            "a": 0
+          }
+        ],
+        "L": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 4,
+            "a": 0
+          }
+        ]
+      },
+      "knockout": {
+        "r32": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "r16": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "qf": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sf": [
+          null,
+          null
+        ],
+        "final": null,
+        "third": null
+      }
+    },
+    {
+      "name": "Pablo",
+      "topScorer": "Kane",
+      "groupScores": {
+        "A": [
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          }
+        ],
+        "B": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "C": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 0
+          }
+        ],
+        "D": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 1
+          }
+        ],
+        "E": [
+          {
+            "h": 5,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 0,
+            "a": 4
+          }
+        ],
+        "F": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 2,
+            "a": 0
+          }
+        ],
+        "G": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "H": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 2
+          }
+        ],
+        "I": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 0
+          }
+        ],
+        "J": [
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "K": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "L": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          }
+        ]
+      },
+      "knockout": {
+        "r32": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "r16": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "qf": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sf": [
+          null,
+          null
+        ],
+        "final": null,
+        "third": null
+      }
+    },
+    {
+      "name": "Jean-Marie",
+      "topScorer": "OLISE",
+      "groupScores": {
+        "A": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          }
+        ],
+        "B": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "C": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          }
+        ],
+        "D": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          }
+        ],
+        "E": [
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 4
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 7
+          }
+        ],
+        "F": [
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "G": [
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "H": [
+          {
+            "h": 6,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          }
+        ],
+        "I": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 0
+          }
+        ],
+        "J": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 4
+          },
+          {
+            "h": 2,
+            "a": 2
+          }
+        ],
+        "K": [
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 4
+          },
+          {
+            "h": 2,
+            "a": 1
+          }
+        ],
+        "L": [
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 2
+          }
+        ]
+      },
+      "knockout": {
+        "r32": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "r16": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "qf": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sf": [
+          null,
+          null
+        ],
+        "final": null,
+        "third": null
+      }
+    },
+    {
+      "name": "Maxime",
+      "topScorer": "O. DEMBELE",
+      "groupScores": {
+        "A": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "B": [
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "C": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "D": [
+          {
+            "h": 3,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "E": [
+          {
+            "h": 6,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "F": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "G": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "H": [
+          {
+            "h": 7,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "I": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "J": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "K": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "L": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ]
+      },
+      "knockout": {
+        "r32": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "r16": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "qf": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sf": [
+          null,
+          null
+        ],
+        "final": null,
+        "third": null
+      }
+    },
+    {
+      "name": "Mathias",
+      "topScorer": "Olise",
+      "groupScores": {
+        "A": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 4,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 2
+          }
+        ],
+        "B": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 4
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          }
+        ],
+        "C": [
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 4
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 8,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 3
+          },
+          {
+            "h": 5,
+            "a": 0
+          }
+        ],
+        "D": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 4,
+            "a": 3
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          }
+        ],
+        "E": [
+          {
+            "h": 12,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 5,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 4
+          },
+          {
+            "h": 0,
+            "a": 6
+          }
+        ],
+        "F": [
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 1
+          }
+        ],
+        "G": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 2,
+            "a": 1
+          }
+        ],
+        "H": [
+          {
+            "h": 9,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 4
+          },
+          {
+            "h": 6,
+            "a": 1
+          },
+          {
+            "h": 8,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 3
+          }
+        ],
+        "I": [
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 7,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 4
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 1
+          }
+        ],
+        "J": [
+          {
+            "h": 5,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 4
+          },
+          {
+            "h": 0,
+            "a": 5
+          },
+          {
+            "h": 2,
+            "a": 1
+          }
+        ],
+        "K": [
+          {
+            "h": 6,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 5,
+            "a": 0
+          },
+          {
+            "h": 4,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 4
+          }
+        ],
+        "L": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 4,
+            "a": 2
+          },
+          {
+            "h": 5,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 6
+          },
+          {
+            "h": 1,
+            "a": 3
+          }
+        ]
+      },
+      "knockout": {
+        "r32": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "r16": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "qf": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sf": [
+          null,
+          null
+        ],
+        "final": null,
+        "third": null
+      }
+    },
+    {
+      "name": "Gokhan",
+      "topScorer": "Olise",
+      "groupScores": {
+        "A": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          }
+        ],
+        "B": [
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          }
+        ],
+        "C": [
+          {
+            "h": 3,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 6,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 0
+          }
+        ],
+        "D": [
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "E": [
+          {
+            "h": 6,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 4
+          }
+        ],
+        "F": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 2,
+            "a": 1
+          }
+        ],
+        "G": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "H": [
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 3
+          },
+          {
+            "h": 2,
+            "a": 1
+          }
+        ],
+        "I": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 4
+          },
+          {
+            "h": 2,
+            "a": 1
+          }
+        ],
+        "J": [
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 5
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "K": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "L": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ]
+      },
+      "knockout": {
+        "r32": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "r16": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "qf": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sf": [
+          null,
+          null
+        ],
+        "final": null,
+        "third": null
+      }
+    },
+    {
+      "name": "Vincent",
+      "topScorer": "Lamine Yamal",
+      "groupScores": {
+        "A": [
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          }
+        ],
+        "B": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 1
+          }
+        ],
+        "C": [
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 0
+          }
+        ],
+        "D": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "E": [
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          }
+        ],
+        "F": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "G": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "H": [
+          {
+            "h": 5,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 3
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "I": [
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "J": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "K": [
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "L": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 0
+          }
+        ]
+      },
+      "knockout": {
+        "r32": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "r16": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "qf": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sf": [
+          null,
+          null
+        ],
+        "final": null,
+        "third": null
+      }
+    },
+    {
+      "name": "Casslec",
+      "topScorer": "",
+      "groupScores": {
+        "A": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "B": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "C": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "D": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "E": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "F": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "G": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "H": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "I": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "J": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "K": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "L": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ]
+      },
+      "knockout": {
+        "r32": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "r16": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "qf": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sf": [
+          null,
+          null
+        ],
+        "final": null,
+        "third": null
+      }
+    },
+    {
+      "name": "Balec",
+      "topScorer": "",
+      "groupScores": {
+        "A": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "B": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "C": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "D": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "E": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "F": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "G": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "H": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "I": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "J": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "K": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "L": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ]
+      },
+      "knockout": {
+        "r32": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "r16": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "qf": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sf": [
+          null,
+          null
+        ],
+        "final": null,
+        "third": null
+      }
+    },
+    {
+      "name": "Grégoire",
+      "topScorer": "Mbappé",
+      "groupScores": {
+        "A": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "B": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "C": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "D": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "E": [
+          {
+            "h": 4,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "F": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "G": [
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "H": [
+          {
+            "h": 5,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "I": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 3
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "J": [
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "K": [
+          {
+            "h": 4,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "L": [
+          {
+            "h": 3,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ]
+      },
+      "knockout": {
+        "r32": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "r16": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "qf": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "sf": [
+          null,
+          null
+        ],
+        "final": null,
+        "third": null
+      }
+    }
+  ]
+}
