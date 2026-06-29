@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-29T09:15:01.887Z",
+  "updatedAt": "2026-06-29T09:19:17.048Z",
   "actual": {
     "groupScores": {
       "A": [
@@ -856,6 +856,144 @@
         ],
         "final": null,
         "third": null
+      },
+      "knockoutScores": {
+        "r32": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "r16": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "qf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "sf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "final": {
+          "h": null,
+          "a": null
+        },
+        "third": {
+          "h": null,
+          "a": null
+        }
       }
     },
     {
@@ -1270,7 +1408,7 @@
             "a": 0
           },
           {
-            "h": 1,
+            "h": 2,
             "a": 1
           }
         ],
@@ -1293,7 +1431,7 @@
           },
           {
             "h": 0,
-            "a": 2
+            "a": 3
           },
           {
             "h": 2,
@@ -1448,8 +1586,8 @@
             "a": 2
           },
           {
-            "h": 1,
-            "a": 2
+            "h": 0,
+            "a": 3
           },
           {
             "h": 2,
@@ -1522,8 +1660,8 @@
             "a": 0
           },
           {
-            "h": 1,
-            "a": 2
+            "h": 0,
+            "a": 1
           },
           {
             "h": 0,
@@ -1576,6 +1714,144 @@
         ],
         "final": null,
         "third": null
+      },
+      "knockoutScores": {
+        "r32": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "r16": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "qf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "sf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "final": {
+          "h": null,
+          "a": null
+        },
+        "third": {
+          "h": null,
+          "a": null
+        }
       }
     },
     {
@@ -2198,8 +2474,8 @@
             "a": 3
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 1
           }
         ],
         "K": [
@@ -2220,12 +2496,12 @@
             "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 3
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 0
           }
         ],
         "L": [
@@ -2246,12 +2522,12 @@
             "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 0,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           }
         ]
       },
@@ -2296,6 +2572,144 @@
         ],
         "final": null,
         "third": null
+      },
+      "knockoutScores": {
+        "r32": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "r16": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "qf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "sf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "final": {
+          "h": null,
+          "a": null
+        },
+        "third": {
+          "h": null,
+          "a": null
+        }
       }
     },
     {
@@ -4276,12 +4690,12 @@
             "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 0
           }
         ],
         "H": [
@@ -4302,12 +4716,12 @@
             "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 0,
+            "a": 3
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 1
           }
         ],
         "I": [
@@ -4328,12 +4742,12 @@
             "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           }
         ],
         "J": [
@@ -4354,12 +4768,12 @@
             "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 0,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 1
           }
         ],
         "K": [
@@ -4380,12 +4794,12 @@
             "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           }
         ],
         "L": [
@@ -4406,12 +4820,12 @@
             "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 0,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 1
           }
         ]
       },
@@ -4456,6 +4870,144 @@
         ],
         "final": null,
         "third": null
+      },
+      "knockoutScores": {
+        "r32": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "r16": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "qf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "sf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "final": {
+          "h": null,
+          "a": null
+        },
+        "third": {
+          "h": null,
+          "a": null
+        }
       }
     }
   ]
