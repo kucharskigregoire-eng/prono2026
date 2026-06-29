@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-26T06:42:31.352Z",
+  "updatedAt": "2026-06-29T09:15:01.887Z",
   "actual": {
     "groupScores": {
       "A": [
@@ -176,12 +176,12 @@
           "a": 3
         },
         {
-          "h": null,
-          "a": null
+          "h": 1,
+          "a": 5
         },
         {
-          "h": null,
-          "a": null
+          "h": 1,
+          "a": 1
         }
       ],
       "H": [
@@ -202,12 +202,12 @@
           "a": 2
         },
         {
-          "h": null,
-          "a": null
+          "h": 0,
+          "a": 1
         },
         {
-          "h": null,
-          "a": null
+          "h": 0,
+          "a": 0
         }
       ],
       "I": [
@@ -228,12 +228,12 @@
           "a": 2
         },
         {
-          "h": null,
-          "a": null
+          "h": 1,
+          "a": 4
         },
         {
-          "h": null,
-          "a": null
+          "h": 5,
+          "a": 0
         }
       ],
       "J": [
@@ -254,12 +254,12 @@
           "a": 2
         },
         {
-          "h": null,
-          "a": null
+          "h": 1,
+          "a": 3
         },
         {
-          "h": null,
-          "a": null
+          "h": 3,
+          "a": 3
         }
       ],
       "K": [
@@ -280,12 +280,12 @@
           "a": 0
         },
         {
-          "h": null,
-          "a": null
+          "h": 0,
+          "a": 0
         },
         {
-          "h": null,
-          "a": null
+          "h": 3,
+          "a": 1
         }
       ],
       "L": [
@@ -306,6 +306,117 @@
           "a": 1
         },
         {
+          "h": 0,
+          "a": 2
+        },
+        {
+          "h": 2,
+          "a": 1
+        }
+      ]
+    },
+    "topScorer": "",
+    "knockout": {
+      "r32": [
+        null,
+        null,
+        1,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "r16": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "qf": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "sf": [
+        null,
+        null
+      ],
+      "final": null,
+      "third": null
+    },
+    "knockoutScores": {
+      "r32": [
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": 0,
+          "a": 1
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
           "h": null,
           "a": null
         },
@@ -313,9 +424,78 @@
           "h": null,
           "a": null
         }
-      ]
-    },
-    "topScorer": ""
+      ],
+      "r16": [
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "qf": [
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "sf": [
+        {
+          "h": null,
+          "a": null
+        },
+        {
+          "h": null,
+          "a": null
+        }
+      ],
+      "final": {
+        "h": null,
+        "a": null
+      },
+      "third": {
+        "h": null,
+        "a": null
+      }
+    }
   },
   "players": [
     {
