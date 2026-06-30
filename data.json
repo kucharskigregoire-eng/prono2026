@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-30T07:21:23.719Z",
+  "updatedAt": "2026-06-30T07:27:11.818Z",
   "actual": {
     "groupScores": {
       "A": [
@@ -3848,68 +3848,68 @@
       "knockoutScores": {
         "r32": [
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 3,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 0,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 3,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 3,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           }
         ],
         "r16": [
