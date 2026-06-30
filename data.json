@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-29T09:19:17.048Z",
+  "updatedAt": "2026-06-30T07:21:23.719Z",
   "actual": {
     "groupScores": {
       "A": [
@@ -318,15 +318,15 @@
     "topScorer": "",
     "knockout": {
       "r32": [
+        1,
         null,
-        null,
+        1,
         1,
         null,
         null,
         null,
         null,
-        null,
-        null,
+        0,
         null,
         null,
         null,
@@ -361,8 +361,8 @@
     "knockoutScores": {
       "r32": [
         {
-          "h": null,
-          "a": null
+          "h": 1,
+          "a": 1
         },
         {
           "h": null,
@@ -370,6 +370,10 @@
         },
         {
           "h": 0,
+          "a": 1
+        },
+        {
+          "h": 1,
           "a": 1
         },
         {
@@ -389,12 +393,8 @@
           "a": null
         },
         {
-          "h": null,
-          "a": null
-        },
-        {
-          "h": null,
-          "a": null
+          "h": 2,
+          "a": 1
         },
         {
           "h": null,
@@ -817,22 +817,22 @@
       },
       "knockout": {
         "r32": [
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
         ],
         "r16": [
           null,
@@ -1315,15 +1315,15 @@
       },
       "knockout": {
         "r32": [
+          0,
+          null,
+          1,
+          1,
           null,
           null,
           null,
           null,
-          null,
-          null,
-          null,
-          null,
-          null,
+          0,
           null,
           null,
           null,
@@ -1354,6 +1354,144 @@
         ],
         "final": null,
         "third": null
+      },
+      "knockoutScores": {
+        "r32": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "r16": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "qf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "sf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "final": {
+          "h": null,
+          "a": null
+        },
+        "third": {
+          "h": null,
+          "a": null
+        }
       }
     },
     {
@@ -1675,15 +1813,15 @@
       },
       "knockout": {
         "r32": [
+          0,
+          null,
+          1,
+          1,
           null,
           null,
           null,
           null,
-          null,
-          null,
-          null,
-          null,
-          null,
+          0,
           null,
           null,
           null,
@@ -2173,22 +2311,22 @@
       },
       "knockout": {
         "r32": [
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
         ],
         "r16": [
           null,
@@ -2212,6 +2350,144 @@
         ],
         "final": null,
         "third": null
+      },
+      "knockoutScores": {
+        "r32": [
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 5,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 0
+          }
+        ],
+        "r16": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "qf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "sf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "final": {
+          "h": null,
+          "a": null
+        },
+        "third": {
+          "h": null,
+          "a": null
+        }
       }
     },
     {
@@ -2533,22 +2809,22 @@
       },
       "knockout": {
         "r32": [
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
         ],
         "r16": [
           null,
@@ -2576,68 +2852,68 @@
       "knockoutScores": {
         "r32": [
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 3,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 3,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           }
         ],
         "r16": [
@@ -3031,22 +3307,22 @@
       },
       "knockout": {
         "r32": [
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0
         ],
         "r16": [
           null,
@@ -3070,6 +3346,144 @@
         ],
         "final": null,
         "third": null
+      },
+      "knockoutScores": {
+        "r32": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "r16": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "qf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "sf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "final": {
+          "h": null,
+          "a": null
+        },
+        "third": {
+          "h": null,
+          "a": null
+        }
       }
     },
     {
@@ -3391,22 +3805,22 @@
       },
       "knockout": {
         "r32": [
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
         ],
         "r16": [
           null,
@@ -3430,6 +3844,144 @@
         ],
         "final": null,
         "third": null
+      },
+      "knockoutScores": {
+        "r32": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "r16": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "qf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "sf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "final": {
+          "h": null,
+          "a": null
+        },
+        "third": {
+          "h": null,
+          "a": null
+        }
       }
     },
     {
@@ -3751,22 +4303,22 @@
       },
       "knockout": {
         "r32": [
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1
         ],
         "r16": [
           null,
@@ -3790,6 +4342,144 @@
         ],
         "final": null,
         "third": null
+      },
+      "knockoutScores": {
+        "r32": [
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 1
+          },
+          {
+            "h": 2,
+            "a": 2
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 0,
+            "a": 1
+          }
+        ],
+        "r16": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "qf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "sf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "final": {
+          "h": null,
+          "a": null
+        },
+        "third": {
+          "h": null,
+          "a": null
+        }
       }
     },
     {
@@ -4111,22 +4801,22 @@
       },
       "knockout": {
         "r32": [
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
         ],
         "r16": [
           null,
@@ -4150,6 +4840,144 @@
         ],
         "final": null,
         "third": null
+      },
+      "knockoutScores": {
+        "r32": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "r16": [
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          },
+          {
+            "h": 0,
+            "a": 0
+          }
+        ],
+        "qf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "sf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "final": {
+          "h": null,
+          "a": null
+        },
+        "third": {
+          "h": null,
+          "a": null
+        }
       }
     },
     {
@@ -4383,7 +5211,7 @@
           },
           {
             "h": 1,
-            "a": 0
+            "a": 1
           },
           {
             "h": 1,
@@ -4471,22 +5299,22 @@
       },
       "knockout": {
         "r32": [
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
         ],
         "r16": [
           null,
@@ -4510,6 +5338,144 @@
         ],
         "final": null,
         "third": null
+      },
+      "knockoutScores": {
+        "r32": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "r16": [
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 1
+          }
+        ],
+        "qf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "sf": [
+          {
+            "h": null,
+            "a": null
+          },
+          {
+            "h": null,
+            "a": null
+          }
+        ],
+        "final": {
+          "h": null,
+          "a": null
+        },
+        "third": {
+          "h": null,
+          "a": null
+        }
       }
     },
     {
@@ -4831,17 +5797,17 @@
       },
       "knockout": {
         "r32": [
+          0,
+          0,
+          1,
+          0,
           null,
           null,
           null,
           null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
+          0,
+          1,
+          0,
           null,
           null,
           null,
@@ -4874,8 +5840,20 @@
       "knockoutScores": {
         "r32": [
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 0,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 1
           },
           {
             "h": null,
@@ -4894,28 +5872,16 @@
             "a": null
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
             "h": null,
