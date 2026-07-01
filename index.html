@@ -395,7 +395,7 @@
   }
   .bracket-round-body { flex: 1; display: flex; flex-direction: column; }
   .match-wrapper {
-    flex: 1; display: flex; align-items: center;
+    flex: 1; display: flex; flex-direction: column; justify-content: center;
     position: relative; padding: 4px 0;
   }
   .match-card-tree {
@@ -488,6 +488,55 @@
     content: ''; position: absolute;
     left: -20px; width: 20px; top: 50%;
     border-top: 2px solid var(--border);
+  }
+
+  /* ===== ARBRE À DOUBLE ENTRÉE (comparatif phase finale) ===== */
+  .bracket-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 22px;
+  }
+  .bracket-row .bracket-tree { min-width: 0; }
+  .bh-right { flex-direction: row; }
+  /* Connecteurs miroir : le tour suivant (plus proche du centre) est ici à GAUCHE */
+  .bh-right .bracket-round:not([data-round="final"]) .match-wrapper::after {
+    right: auto; left: -20px;
+    border-right-width: 0 !important;
+  }
+  .bh-right .bracket-round:not([data-round="final"]) .match-wrapper:nth-child(odd)::after {
+    border-top-width: 2px; border-left-width: 2px;
+  }
+  .bh-right .bracket-round:not([data-round="final"]) .match-wrapper:nth-child(even)::after {
+    border-bottom-width: 2px; border-left-width: 2px;
+  }
+  .bh-right .bracket-round:not([data-round="r32"]) .match-wrapper::before {
+    left: auto; right: -20px;
+  }
+  .kt-center {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 18px; flex: 0 0 220px;
+  }
+  .kt-center .bracket-round { flex: 0 0 auto; width: 100%; }
+  .team-btn.tbd { cursor: default; }
+  .team-btn:not(.tbd) { cursor: default; }
+  .kt-extra { margin-top: 4px; }
+  .kt-toggle {
+    cursor: pointer; font-size: 0.66rem; color: var(--muted); font-weight: 700;
+    list-style: none; padding: 3px 8px; border: 1px solid var(--border-soft);
+    border-radius: 8px; text-align: center; background: var(--surface);
+    user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .kt-toggle::-webkit-details-marker { display: none; }
+  .kt-toggle:hover { border-color: var(--accent-2); color: var(--text); }
+  .kt-extra[open] .kt-toggle { color: var(--accent); border-color: var(--accent); }
+  .kt-panel {
+    margin-top: 6px; padding: 8px; background: var(--surface);
+    border: 1px solid var(--border-soft); border-radius: 8px;
+    position: relative; z-index: 5;
+  }
+  .kt-panel .cmp-grid { gap: 5px; }
+  .kt-center .match-wrapper::before, .kt-center .match-wrapper::after { display: none; }
+  @media (max-width: 1000px) {
+    .bracket-row { align-items: flex-start; }
   }
 
   /* CHAMPION DISPLAY */
@@ -614,6 +663,12 @@
 .cmp-pred.is5 { border-color:rgba(16,185,129,0.4); }
 
 .muted-row { color:var(--muted); font-size:0.85rem; }
+.cmp-section-title {
+  font-family:'Bebas Neue',sans-serif; font-size:1.15rem; color:var(--accent);
+  letter-spacing:2px; padding:6px 4px; margin:4px 0 10px; display:flex; align-items:center; gap:8px;
+}
+.cmp-section-title.alt { color:var(--accent-2); margin-top:26px; }
+.cmp-recent-wrap { margin-bottom:8px; }
 .pill-final {
   display:inline-flex; align-items:center; gap:6px; background:var(--surface);
   border:1px solid var(--border-soft); border-radius:14px; padding:3px 10px; font-size:0.82rem; margin:3px;
@@ -1301,101 +1356,175 @@ function koPlayerScore(p, key, idx) {
   return (key === "final" || key === "third") ? ks[key] : (ks[key] && ks[key][idx]);
 }
 
+// Carte de comparatif générique (poule ou phase finale) : le résultat réel
+// ET les pronos restent masqués tant que le match n'a pas été joué.
+function cmpCardHtml(homeName, awayName, real, subLabel, predLookup) {
+  const realHtml = real
+    ? `<span class="cmp-real">${real.h} – ${real.a}</span>`
+    : `<span class="cmp-real pending">à jouer</span>`;
+  let preds = "";
+  if (real) {
+    DATA.players.forEach(p => {
+      const s = predLookup(p);
+      if (!s || s.h === null || s.h === undefined || s.a === null || s.a === undefined) return;
+      const pts = scoreMatch(s, real);
+      const ptsHtml = `<span class="pts pts-${pts}">${pts}</span>`;
+      const cls = pts === 5 ? "cmp-pred is5" : "cmp-pred";
+      preds += `<span class="${cls}"><span class="who">${escapeHtml(p.name)}</span>
+        <span class="sc">${s.h}–${s.a}</span>${ptsHtml}</span>`;
+    });
+    if (!preds) preds = `<span class="muted-row">Aucun prono saisi pour ce match.</span>`;
+  } else {
+    preds = `<span class="muted-row">🔒 Pronostics masqués jusqu'au coup d'envoi.</span>`;
+  }
+  return `<div class="cmp-match">
+    <div class="cmp-head">
+      <div class="cmp-teams">
+        ${flagHTML(homeName, "fi-md")}${escapeHtml(homeName)}
+        <span style="color:var(--muted)">vs</span>
+        ${flagHTML(awayName, "fi-md")}${escapeHtml(awayName)}
+        ${subLabel ? `<span style="color:var(--muted);font-size:.72rem">· ${escapeHtml(subLabel)}</span>` : ""}
+      </div>
+      ${realHtml}
+    </div>
+    <div class="cmp-grid">${preds}</div>
+  </div>`;
+}
+
+// Rassemble tous les matchs déjà joués (poule + phase finale), tous types confondus,
+// triés du plus récent au plus ancien — pour ne pas avoir à dérouler tout le calendrier.
+function gatherRecentResults(limit) {
+  const items = [];
+  SCHEDULE.forEach(m => {
+    const real = realScore(m.group, m.matchIdx);
+    if (!real) return;
+    items.push({ kind: "group", sortKey: m.date + "T12:00", m, real });
+  });
+  const rb = computeBracket(DATA.actual);
+  [
+    ...rb.r32.map(m => ({ m, key: "r32" })), ...rb.r16.map(m => ({ m, key: "r16" })),
+    ...rb.qf.map(m => ({ m, key: "qf" })), ...rb.sf.map(m => ({ m, key: "sf" })),
+    { m: rb.third, key: "third" }, { m: rb.final, key: "final" }
+  ].forEach(({ m, key }) => {
+    const real = realKoScore(key, m.idx);
+    if (!real) return;
+    const t = m.time ? m.time.replace("h", ":") : "12:00";
+    items.push({ kind: "ko", sortKey: (m.date || "") + "T" + t, m, key, real });
+  });
+  items.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
+  return items.slice(0, limit);
+}
+
 function renderMatchs() {
   const c = document.getElementById("panel-matchs");
   if (!DATA.players.length && !hasAnyData()) { c.innerHTML = `<div class="empty-state">En attente de pronostics et de résultats.</div>`; return; }
 
+  let html = `<div class="notice">Comparatif des matchs de poule ci-dessous. Pour les 16es, 8es, quarts, demies et la finale, direction l'onglet <b>🏆 Phase finale</b> qui affiche l'arbre complet.</div>`;
+
+  // ===== Derniers résultats (accès rapide) =====
+  const recent = gatherRecentResults(8);
+  if (recent.length) {
+    html += `<div class="cmp-section-title">🔥 Derniers résultats</div><div class="cmp-recent-wrap">`;
+    recent.forEach(it => {
+      if (it.kind === "group") {
+        html += cmpCardHtml(it.m.home, it.m.away, it.real, "Groupe " + it.m.group, p => (p.groupScores[it.m.group] || [])[it.m.matchIdx]);
+      } else {
+        const homeName = it.m.home.name || it.m.home.label;
+        const awayName = it.m.away.name || it.m.away.label;
+        const dl = it.m.date ? formatDateFr(it.m.date) + (it.m.time ? " · " + it.m.time : "") : "";
+        html += cmpCardHtml(homeName, awayName, it.real, it.m.label + (dl ? " · " + dl : ""), p => koPlayerScore(p, it.key, it.m.idx));
+      }
+    });
+    html += `</div>`;
+  }
+
+  // ===== Calendrier complet des matchs de poule =====
+  html += `<div class="cmp-section-title alt">📅 Calendrier des matchs de poule</div>`;
   const sorted = [...SCHEDULE].sort((a, b) => a.date.localeCompare(b.date) || a.group.localeCompare(b.group));
   const byDate = {};
   sorted.forEach(m => { (byDate[m.date] = byDate[m.date] || []).push(m); });
-
-  let html = "";
   Object.keys(byDate).sort().forEach(date => {
     html += `<div class="cal-date-header">${escapeHtml(formatDateFr(date))}</div>`;
     byDate[date].forEach(m => {
       const real = realScore(m.group, m.matchIdx);
-      const realHtml = real
-        ? `<span class="cmp-real">${real.h} – ${real.a}</span>`
-        : `<span class="cmp-real pending">à jouer</span>`;
-      let preds = "";
-      DATA.players.forEach(p => {
-        const arr = p.groupScores[m.group] || [];
-        const s = arr[m.matchIdx];
-        if (!s || s.h === null || s.h === undefined || s.a === null || s.a === undefined) return;
-        const pts = real ? scoreMatch(s, real) : null;
-        const ptsHtml = pts === null ? "" : `<span class="pts pts-${pts}">${pts}</span>`;
-        const cls = pts === 5 ? "cmp-pred is5" : "cmp-pred";
-        preds += `<span class="${cls}"><span class="who">${escapeHtml(p.name)}</span>
-          <span class="sc">${s.h}–${s.a}</span>${ptsHtml}</span>`;
-      });
-      if (!preds) preds = `<span class="muted-row">Aucun prono saisi pour ce match.</span>`;
-      html += `<div class="cmp-match">
-        <div class="cmp-head">
-          <div class="cmp-teams">
-            ${flagHTML(m.home, "fi-md")}${escapeHtml(m.home)}
-            <span style="color:var(--muted)">vs</span>
-            ${flagHTML(m.away, "fi-md")}${escapeHtml(m.away)}
-            <span style="color:var(--muted);font-size:.72rem">· ${escapeHtml(m.group)}</span>
-          </div>
-          ${realHtml}
-        </div>
-        <div class="cmp-grid">${preds}</div>
-      </div>`;
+      html += cmpCardHtml(m.home, m.away, real, "Groupe " + m.group, p => (p.groupScores[m.group] || [])[m.matchIdx]);
     });
   });
-
-  // ===== Phase finale (par emplacement de match) =====
-  const rb = computeBracket(DATA.actual);
-  const koRounds = [
-    ["16es de finale", rb.r32, "r32"], ["8es de finale", rb.r16, "r16"],
-    ["Quarts de finale", rb.qf, "qf"], ["Demi-finales", rb.sf, "sf"],
-    ["Match pour la 3e place", [rb.third], "third"], ["Finale", [rb.final], "final"]
-  ];
-  let koHtml = "";
-  koRounds.forEach(([label, matches, key]) => {
-    matches.forEach((m, idx) => {
-      const real = realKoScore(key, idx);
-      const realHtml = real ? `<span class="cmp-real">${real.h} – ${real.a}</span>` : `<span class="cmp-real pending">à jouer</span>`;
-      const homeName = m.home.name || m.home.label;
-      const awayName = m.away.name || m.away.label;
-      let preds = "";
-      DATA.players.forEach(p => {
-        const sc = koPlayerScore(p, key, idx);
-        if (!sc || sc.h === null || sc.h === undefined || sc.a === null || sc.a === undefined) return;
-        const pts = real ? scoreMatch(sc, real) : null;
-        const ptsHtml = pts === null ? "" : `<span class="pts pts-${pts}">${pts}</span>`;
-        const cls = pts === 5 ? "cmp-pred is5" : "cmp-pred";
-        preds += `<span class="${cls}"><span class="who">${escapeHtml(p.name)}</span><span class="sc">${sc.h}–${sc.a}</span>${ptsHtml}</span>`;
-      });
-      if (!preds) preds = `<span class="muted-row">Aucun prono saisi pour ce match.</span>`;
-      const dateLabel = m.date ? formatDateFr(m.date) + (m.time ? " · " + m.time : "") : "";
-      koHtml += `<div class="cmp-match">
-        <div class="cmp-head">
-          <div class="cmp-teams">
-            ${m.home.name ? flagHTML(m.home.name, "fi-md") : ""}${escapeHtml(homeName)}
-            <span style="color:var(--muted)">vs</span>
-            ${m.away.name ? flagHTML(m.away.name, "fi-md") : ""}${escapeHtml(awayName)}
-            <span style="color:var(--muted);font-size:.72rem">· ${escapeHtml(m.label)}${dateLabel ? " · " + escapeHtml(dateLabel) : ""}</span>
-          </div>
-          ${realHtml}
-        </div>
-        <div class="cmp-grid">${preds}</div>
-      </div>`;
-    });
-  });
-  if (koHtml) html += `<div class="cal-date-header" style="margin-top:20px;color:var(--accent)">★ Phase finale</div>` + koHtml;
 
   c.innerHTML = html;
 }
 
-// ============ COMPARATIF PHASE FINALE (non scoré) ============
+// ============ PHASE FINALE — ARBRE À DOUBLE ENTRÉE ============
+const KT_ROUND_LABELS = { r32: "16es de finale", r16: "8es de finale", qf: "Quarts de finale", sf: "Demi-finales" };
+
+function ktTeamRow(team, real, side, winnerSide) {
+  const isWinner = winnerSide === side;
+  const hasName = !!team.name;
+  const flag = hasName ? flagHTML(team.name, "fi-sm") : `<span class="placeholder-dot"></span>`;
+  const label = hasName ? team.name : team.label;
+  const score = (real && hasName) ? (side === 0 ? real.h : real.a) : null;
+  return `<div class="team-btn${isWinner ? " winner" : ""}${hasName ? "" : " tbd"}">
+    ${flag}<span class="team-name">${escapeHtml(label)}</span>
+    ${score !== null ? `<span class="seed-tag">${score}</span>` : ""}
+  </div>`;
+}
+
+// Bouton « pronos » dépliable sous chaque match : masqué tant que le match n'est pas joué.
+function ktExtraHtml(m) {
+  const ready = !!(m.home.name && m.away.name);
+  if (!ready) return "";
+  const real = realKoScore(m.round, m.idx);
+  let predCount = 0, predsHtml = "";
+  DATA.players.forEach(p => {
+    const sc = koPlayerScore(p, m.round, m.idx);
+    if (!sc || sc.h === null || sc.h === undefined || sc.a === null || sc.a === undefined) return;
+    predCount++;
+    if (!real) return;
+    const pts = scoreMatch(sc, real);
+    const cls = pts === 5 ? "cmp-pred is5" : "cmp-pred";
+    predsHtml += `<span class="${cls}"><span class="who">${escapeHtml(p.name)}</span><span class="sc">${sc.h}–${sc.a}</span><span class="pts pts-${pts}">${pts}</span></span>`;
+  });
+  let toggleLabel, panelHtml;
+  if (!real) {
+    toggleLabel = predCount ? `🔒 ${predCount} prono${predCount > 1 ? "s" : ""} masqué${predCount > 1 ? "s" : ""}` : "Aucun prono saisi";
+    panelHtml = `<span class="muted-row">Les pronostics seront révélés une fois ce match joué.</span>`;
+  } else {
+    toggleLabel = predCount ? `👥 ${predCount} prono${predCount > 1 ? "s" : ""}` : "Aucun prono saisi";
+    panelHtml = predsHtml || `<span class="muted-row">Aucun prono saisi pour ce match.</span>`;
+  }
+  return `<details class="kt-extra"><summary class="kt-toggle">${toggleLabel}</summary><div class="kt-panel"><div class="cmp-grid">${panelHtml}</div></div></details>`;
+}
+
+function ktCard(m) {
+  const real = realKoScore(m.round, m.idx);
+  const dateLabel = m.date ? formatDateFr(m.date) + (m.time ? " · " + m.time : "") : "";
+  return `<div class="match-card-tree">
+      <div class="match-label">${escapeHtml(m.label)}${dateLabel ? " · " + escapeHtml(dateLabel) : ""}</div>
+      ${ktTeamRow(m.home, real, 0, m.winnerSide)}
+      ${ktTeamRow(m.away, real, 1, m.winnerSide)}
+    </div>${ktExtraHtml(m)}`;
+}
+
+function ktRound(key, matches, label) {
+  let body = "";
+  matches.forEach(m => { body += `<div class="match-wrapper">${ktCard(m)}</div>`; });
+  return `<div class="bracket-round" data-round="${key}">
+    <div class="bracket-round-header">${escapeHtml(label)}</div>
+    <div class="bracket-round-body">${body}</div>
+  </div>`;
+}
+
 function renderFinale() {
   const c = document.getElementById("panel-finale");
   if (!DATA.players.length) { c.innerHTML = `<div class="empty-state">Aucun pronostic publié pour l'instant.</div>`; return; }
+
   const cell = (name) => name
     ? `<span class="pill-final">${flagHTML(name, "fi-sm")}${escapeHtml(name)}</span>`
     : `<span class="muted-row">—</span>`;
-  let html = `<div class="notice">Récapitulatif des pronostics de fin de tableau. Les scores de chaque match de la phase finale comptent dans le classement (barème 5/3/2/0) ; le détail par match est dans l'onglet « Comparatif par match ».</div>
+
+  let html = `<div class="notice">En haut : ce que chaque joueur a prédit pour la fin du tournoi. En bas : l'arbre <b>réel</b> de la phase finale, mis à jour au fil des résultats — cliquez sur « pronos » sous un match pour voir le détail des pronostics (masqué tant que le match n'a pas été joué). Chaque match de phase finale compte selon le barème 5/3/2/0.</div>`;
+
+  html += `<div class="cmp-section-title">📋 Pronostics de fin de tableau (par joueur)</div>
     <table class="lb-table"><thead><tr>
       <th>Joueur</th><th>Champion</th><th>Finaliste</th><th>3e place</th><th>Meilleur buteur</th>
     </tr></thead><tbody>`;
@@ -1410,6 +1539,59 @@ function renderFinale() {
     </tr>`;
   });
   html += `</tbody></table>`;
+
+  // ===== Arbre réel de la phase finale =====
+  const rb = computeBracket(DATA.actual);
+
+  if (rb.champion) {
+    html += `<div class="champion-banner">
+      <div class="champion-info">
+        <span class="trophy-icon">🏆</span>
+        <div class="champion-text">
+          <div class="label">Champion du monde (résultat réel)</div>
+          <div class="name-row">${flagHTML(rb.champion, "fi-xl")}<span class="name">${escapeHtml(rb.champion)}</span></div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="cmp-section-title alt">🌳 Arbre de la phase finale (résultats réels)</div>`;
+
+  const leftHtml =
+    ktRound("r32", rb.r32.slice(0, 8), KT_ROUND_LABELS.r32) +
+    ktRound("r16", rb.r16.slice(0, 4), KT_ROUND_LABELS.r16) +
+    ktRound("qf", rb.qf.slice(0, 2), KT_ROUND_LABELS.qf) +
+    ktRound("sf", rb.sf.slice(0, 1), KT_ROUND_LABELS.sf);
+
+  const rightHtml =
+    ktRound("sf", rb.sf.slice(1, 2), KT_ROUND_LABELS.sf) +
+    ktRound("qf", rb.qf.slice(2, 4), KT_ROUND_LABELS.qf) +
+    ktRound("r16", rb.r16.slice(4, 8), KT_ROUND_LABELS.r16) +
+    ktRound("r32", rb.r32.slice(8, 16), KT_ROUND_LABELS.r32);
+
+  const real3 = realKoScore("third", 0);
+  const centerHtml = `<div class="kt-center">
+    <div style="font-size:2.4rem;line-height:1;">🏆</div>
+    <div class="bracket-round" data-round="final">
+      <div class="bracket-round-header">Finale</div>
+      <div class="bracket-round-body" style="min-height:0;">
+        <div class="match-wrapper" style="flex:0 0 auto;">${ktCard(rb.final)}</div>
+      </div>
+    </div>
+    <div class="third-place-card" style="margin-top:6px;">
+      <div class="match-label">Match pour la 3e place</div>
+      ${ktTeamRow(rb.third.home, real3, 0, rb.third.winnerSide)}
+      ${ktTeamRow(rb.third.away, real3, 1, rb.third.winnerSide)}
+    </div>
+    ${ktExtraHtml(rb.third)}
+  </div>`;
+
+  html += `<div class="bracket-scroll"><div class="bracket-row">
+    <div class="bracket-tree bh-left">${leftHtml}</div>
+    ${centerHtml}
+    <div class="bracket-tree bh-right">${rightHtml}</div>
+  </div></div>`;
+
   c.innerHTML = html;
 }
 
