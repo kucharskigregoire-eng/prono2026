@@ -1668,10 +1668,36 @@ function attachKoListeners() {
       updateCardLocal(e.target.closest(".ko-card"), round, idx);
       scheduleSave();
     });
-    inp.addEventListener("change", () => {
+    // Mémorise vers quel champ le focus se dirige (Tab/Maj+Tab) AVANT que le
+    // re-rendu de "change" ne détruise le DOM — sinon le focus se perd.
+    inp.addEventListener("blur", (e) => {
+      const rt = e.relatedTarget;
+      e.target._focusNext = (rt && rt.classList && rt.classList.contains("score-input"))
+        ? { round: rt.dataset.round, idx: rt.dataset.idx, side: rt.dataset.side }
+        : null;
+    });
+    inp.addEventListener("change", (e) => {
+      const restore = e.target._focusNext;
       const nb = computeBracket(player);
       renderKnockout(nb);
       updateChampionDisplay(nb);
+      if (restore) {
+        const sel = `.ko-card[data-round="${restore.round}"][data-idx="${restore.idx}"] .score-input[data-side="${restore.side}"]`;
+        const el = document.querySelector(sel);
+        if (el && !el.disabled) {
+          el.focus();
+          try { el.setSelectionRange(el.value.length, el.value.length); } catch (_) {}
+        }
+      }
+    });
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const all = Array.from(document.querySelectorAll(".ko-card .score-input"));
+        const idx = all.indexOf(e.target);
+        const next = all[idx + 1];
+        if (next) next.focus();
+      }
     });
   });
   document.querySelectorAll(".ko-pen-btn").forEach(btn => {
@@ -1751,21 +1777,24 @@ function exportExcel() {
   wsStandings["!cols"] = [{wch:8},{wch:6},{wch:22},{wch:5},{wch:5},{wch:5},{wch:5},{wch:5},{wch:5},{wch:6},{wch:5},{wch:16}];
   XLSX.utils.book_append_sheet(wb, wsStandings, "Classements");
 
-  const koRows = [["Tour", "Match", "Équipe 1", "Équipe 2", "Vainqueur prédit"]];
-  function pushKO(label, matchLabel, m, pickIdx) {
+  const koRows = [["Tour", "Match", "Équipe 1", "Score 1", "Score 2", "Équipe 2", "Vainqueur prédit"]];
+  function pushKO(label, matchLabel, m) {
     let winner = "";
-    if (pickIdx === 0) winner = m.home.name || "";
-    else if (pickIdx === 1) winner = m.away.name || "";
-    koRows.push([label, matchLabel, m.home.name || ("(" + m.home.label + ")"), m.away.name || ("(" + m.away.label + ")"), winner]);
+    if (m.winnerSide === 0) winner = m.home.name || "";
+    else if (m.winnerSide === 1) winner = m.away.name || "";
+    const sc = koScoreObj(m.round, m.idx);
+    const sh = (sc && sc.h !== null && sc.h !== undefined) ? sc.h : "";
+    const sa = (sc && sc.a !== null && sc.a !== undefined) ? sc.a : "";
+    koRows.push([label, matchLabel, m.home.name || ("(" + m.home.label + ")"), sh, sa, m.away.name || ("(" + m.away.label + ")"), winner]);
   }
-  bracket.r32.forEach((m, i) => pushKO("16e de finale", "16e #" + (i+1), m, player.knockout.r32[i]));
-  bracket.r16.forEach((m, i) => pushKO("8e de finale", "8e #" + (i+1), m, player.knockout.r16[i]));
-  bracket.qf.forEach((m, i) => pushKO("Quart de finale", "Q" + (i+1), m, player.knockout.qf[i]));
-  bracket.sf.forEach((m, i) => pushKO("Demi-finale", "Demi " + (i+1), m, player.knockout.sf[i]));
-  pushKO("Match 3e place", "3e place", bracket.third, player.knockout.third);
-  pushKO("Finale", "FINALE", bracket.final, player.knockout.final);
+  bracket.r32.forEach((m, i) => pushKO("16e de finale", "16e #" + (i+1), m));
+  bracket.r16.forEach((m, i) => pushKO("8e de finale", "8e #" + (i+1), m));
+  bracket.qf.forEach((m, i) => pushKO("Quart de finale", "Q" + (i+1), m));
+  bracket.sf.forEach((m, i) => pushKO("Demi-finale", "Demi " + (i+1), m));
+  pushKO("Match 3e place", "3e place", bracket.third);
+  pushKO("Finale", "FINALE", bracket.final);
   const wsKO = XLSX.utils.aoa_to_sheet(koRows);
-  wsKO["!cols"] = [{wch:18},{wch:10},{wch:26},{wch:26},{wch:24}];
+  wsKO["!cols"] = [{wch:18},{wch:10},{wch:26},{wch:8},{wch:8},{wch:26},{wch:24}];
   XLSX.utils.book_append_sheet(wb, wsKO, "Phase finale");
 
   const safeName = (player.name || "anonyme").replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 20);
@@ -1854,24 +1883,45 @@ function importApplyWorkbook(wb) {
   const koRows = importSheetRows(wb, "Phase finale");
   if (koRows) {
     const winners = { r32: [], r16: [], qf: [], sf: [], third: null, final: null };
+    const scores  = { r32: [], r16: [], qf: [], sf: [], third: null, final: null };
     for (let i = 1; i < koRows.length; i++) {
       const row = koRows[i];
       if (!row) continue;
       const tour = String(row[0] || "").trim();
-      const winner = importCleanVal(row[4]);
-      if (tour === "16e de finale") winners.r32.push(winner);
-      else if (tour === "8e de finale") winners.r16.push(winner);
-      else if (tour === "Quart de finale") winners.qf.push(winner);
-      else if (tour === "Demi-finale") winners.sf.push(winner);
-      else if (tour === "Match 3e place") winners.third = winner;
-      else if (tour === "Finale") winners.final = winner;
+      const sh = row[3], sa = row[4];
+      const winner = importCleanVal(row[6]);
+      let h = (sh === "" || sh === null || sh === undefined) ? null : parseInt(sh);
+      let a = (sa === "" || sa === null || sa === undefined) ? null : parseInt(sa);
+      if (h !== null && isNaN(h)) h = null;
+      if (a !== null && isNaN(a)) a = null;
+      const scoreObj = { h, a };
+      if (tour === "16e de finale") { winners.r32.push(winner); scores.r32.push(scoreObj); }
+      else if (tour === "8e de finale") { winners.r16.push(winner); scores.r16.push(scoreObj); }
+      else if (tour === "Quart de finale") { winners.qf.push(winner); scores.qf.push(scoreObj); }
+      else if (tour === "Demi-finale") { winners.sf.push(winner); scores.sf.push(scoreObj); }
+      else if (tour === "Match 3e place") { winners.third = winner; scores.third = scoreObj; }
+      else if (tour === "Finale") { winners.final = winner; scores.final = scoreObj; }
+    }
+
+    // Applique les scores exacts d'un tour et, quand ils sont décisifs (pas de nul),
+    // en déduit le vainqueur (prioritaire sur le nom lu, qui sert surtout aux tirs au but).
+    function applyScoresRound(round, arr) {
+      arr.forEach((s, i) => {
+        if (s.h === null || s.a === null) return;
+        player.knockoutScores[round][i] = { h: s.h, a: s.a };
+        if (s.h !== s.a) player.knockout[round][i] = s.h > s.a ? 0 : 1;
+      });
     }
 
     // L'ordre est important : chaque tour dépend des choix du tour précédent
     summary.koPicks += importApplyRound("r32", winners.r32);
+    applyScoresRound("r32", scores.r32);
     summary.koPicks += importApplyRound("r16", winners.r16);
+    applyScoresRound("r16", scores.r16);
     summary.koPicks += importApplyRound("qf", winners.qf);
+    applyScoresRound("qf", scores.qf);
     summary.koPicks += importApplyRound("sf", winners.sf);
+    applyScoresRound("sf", scores.sf);
 
     // 3e place et finale : nécessitent les demi-finales résolues
     const b = computeBracket(player);
@@ -1879,9 +1929,17 @@ function importApplyWorkbook(wb) {
       if (b.third.home.name === winners.third) { player.knockout.third = 0; summary.koPicks++; }
       else if (b.third.away.name === winners.third) { player.knockout.third = 1; summary.koPicks++; }
     }
+    if (scores.third && scores.third.h !== null && scores.third.a !== null) {
+      player.knockoutScores.third = { h: scores.third.h, a: scores.third.a };
+      if (scores.third.h !== scores.third.a) player.knockout.third = scores.third.h > scores.third.a ? 0 : 1;
+    }
     if (winners.final) {
       if (b.final.home.name === winners.final) { player.knockout.final = 0; summary.koPicks++; }
       else if (b.final.away.name === winners.final) { player.knockout.final = 1; summary.koPicks++; }
+    }
+    if (scores.final && scores.final.h !== null && scores.final.a !== null) {
+      player.knockoutScores.final = { h: scores.final.h, a: scores.final.a };
+      if (scores.final.h !== scores.final.a) player.knockout.final = scores.final.h > scores.final.a ? 0 : 1;
     }
   }
 
