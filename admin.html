@@ -1408,7 +1408,35 @@ function attachKoListenersA() {
       if (aEl) aEl.classList.toggle("ko-win", pick === 1);
       saveAdmin();
     });
-    inp.addEventListener("change", () => { renderKoResults(); renderApercu(); });
+    // Mémorise vers quel champ le focus se dirige (Tab/Maj+Tab) AVANT que le
+    // re-rendu de "change" ne détruise le DOM — sinon le focus se perd.
+    inp.addEventListener("blur", (e) => {
+      const rt = e.relatedTarget;
+      e.target._focusNext = (rt && rt.classList && rt.classList.contains("score-input"))
+        ? { round: rt.dataset.round, idx: rt.dataset.idx, side: rt.dataset.side }
+        : null;
+    });
+    inp.addEventListener("change", (e) => {
+      const restore = e.target._focusNext;
+      renderKoResults(); renderApercu();
+      if (restore) {
+        const sel = `.ko-card[data-round="${restore.round}"][data-idx="${restore.idx}"] .score-input[data-side="${restore.side}"]`;
+        const el = document.querySelector(sel);
+        if (el && !el.disabled) {
+          el.focus();
+          try { el.setSelectionRange(el.value.length, el.value.length); } catch (_) {}
+        }
+      }
+    });
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const all = Array.from(document.querySelectorAll("#koResultsGrid .score-input, #koThirdResults .score-input"));
+        const idx = all.indexOf(e.target);
+        const next = all[idx + 1];
+        if (next) next.focus();
+      }
+    });
   });
   document.querySelectorAll("#koResultsGrid .ko-pen-btn, #koThirdResults .ko-pen-btn").forEach(btn => {
     btn.addEventListener("click", () => {
