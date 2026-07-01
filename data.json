@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-01T07:07:28.600Z",
+  "updatedAt": "2026-07-01T07:43:36.396Z",
   "actual": {
     "groupScores": {
       "A": [
@@ -1814,7 +1814,7 @@
       "knockout": {
         "r32": [
           0,
-          null,
+          0,
           1,
           1,
           null,
@@ -1822,8 +1822,8 @@
           null,
           null,
           0,
-          null,
-          null,
+          1,
+          0,
           null,
           null,
           null,
@@ -1856,8 +1856,20 @@
       "knockoutScores": {
         "r32": [
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 1
           },
           {
             "h": null,
@@ -1876,28 +1888,16 @@
             "a": null
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 0
           },
           {
             "h": null,
