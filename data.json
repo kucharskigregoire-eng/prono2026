@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-02T06:56:36.399Z",
+  "updatedAt": "2026-07-02T07:01:41.076Z",
   "actual": {
     "groupScores": {
       "A": [
@@ -1813,21 +1813,21 @@
       },
       "knockout": {
         "r32": [
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
           null,
           null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
+          0,
           null
         ],
         "r16": [
@@ -1856,8 +1856,52 @@
       "knockoutScores": {
         "r32": [
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 0
+          },
+          {
+            "h": 2,
+            "a": 0
           },
           {
             "h": null,
@@ -1868,52 +1912,8 @@
             "a": null
           },
           {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 1
           },
           {
             "h": null,
