@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-02T07:01:41.076Z",
+  "updatedAt": "2026-07-02T08:19:41.175Z",
   "actual": {
     "groupScores": {
       "A": [
@@ -860,68 +860,68 @@
       "knockoutScores": {
         "r32": [
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 4,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 3
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 3,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 3,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 0,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 0,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 4,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 3,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 2
           }
         ],
         "r16": [
@@ -1315,18 +1315,18 @@
       },
       "knockout": {
         "r32": [
+          0,
+          0,
+          1,
+          1,
           null,
           null,
+          0,
           null,
+          0,
           null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
+          0,
+          0,
           null,
           null,
           null,
@@ -1358,8 +1358,20 @@
       "knockoutScores": {
         "r32": [
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
+          },
+          {
+            "h": 3,
+            "a": 1
+          },
+          {
+            "h": 1,
+            "a": 2
+          },
+          {
+            "h": 1,
+            "a": 1
           },
           {
             "h": null,
@@ -1370,40 +1382,28 @@
             "a": null
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           },
           {
-            "h": null,
-            "a": null
+            "h": 1,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 2
           },
           {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 1
           },
           {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
-          },
-          {
-            "h": null,
-            "a": null
+            "h": 2,
+            "a": 0
           },
           {
             "h": null,
