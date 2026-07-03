@@ -949,6 +949,31 @@ const REAL_R32 = [
   { home:"Suisse",         away:"Algérie",    date:"2026-07-03", time:"05h00" },
   { home:"Colombie",       away:"Ghana",      date:"2026-07-04", time:"03h30" }
 ];
+
+// 8es de finale — équipes réelles (à compléter au fur et à mesure des résultats FIFA).
+// Chaque case correspond au 8e #(i+1) et jumelle les vainqueurs des 16es (#2i+1, #2i+2).
+// Pour figer une confrontation, renseigner home ET away. Sinon laisser les deux à null :
+// l'app retombe automatiquement sur "V. 16e #X" (comportement actuel) sans effacer
+// les scores déjà saisis à cette position.
+const REAL_R16 = [
+  // 8e #1  ← V. 16e #1 (Allemagne/Paraguay)      × V. 16e #2 (France/Suède)
+  { home:"Paraguay", away:"France" },
+  // 8e #2  ← V. 16e #3 (Afrique du Sud/Canada)   × V. 16e #4 (Pays-Bas/Maroc)
+  { home:"Canada", away:"Maroc" },
+  // 8e #3  ← V. 16e #5 (Portugal/Croatie)        × V. 16e #6 (Espagne/Autriche)
+  { home:"Portugal", away:"Espagne" },
+  // 8e #4  ← V. 16e #7 (États-Unis/Bosnie-H.)    × V. 16e #8 (Belgique/Sénégal)
+  { home:"États-Unis", away:"Belgique" },
+  // 8e #5  ← V. 16e #9 (Brésil/Japon)            × V. 16e #10 (Côte d'Ivoire/Norvège)
+  { home:"Brésil", away:"Norvège" },
+  // 8e #6  ← V. 16e #11 (Mexique/Équateur)       × V. 16e #12 (Angleterre/RD Congo)
+  { home:"Mexique", away:"Angleterre" },
+  // 8e #7  ← V. 16e #13 (Argentine/Cap-Vert)     × V. 16e #14 (Égypte/Australie)
+  { home:null, away:null },
+  // 8e #8  ← V. 16e #15 (Suisse/Algérie)         × V. 16e #16 (Colombie/Ghana)
+  { home:"Suisse", away:null }
+];
+
 const KO_DATES = {
   r16: [
     {date:"2026-07-04",time:"23h00"},{date:"2026-07-04",time:"19h00"},
@@ -999,7 +1024,33 @@ function computeBracket(pl) {
     return out;
   }
 
-  const r16 = buildRound(r32, 8, "r16");
+  // 8es : figés par REAL_R16 quand renseignés, sinon dérivés des 16es (fallback)
+  function buildR16() {
+    const out = [];
+    const dates = KO_DATES.r16;
+    for (let i = 0; i < 8; i++) {
+      const forced = REAL_R16[i] || {};
+      const m1 = r32[2*i], m2 = r32[2*i+1];
+      let home, away;
+      if (forced.home) {
+        home = { name: forced.home, label: forced.home };
+      } else {
+        home = winner(m1, m1.winnerSide);
+        if (!home.name) home.label = "V. " + m1.label;
+      }
+      if (forced.away) {
+        away = { name: forced.away, label: forced.away };
+      } else {
+        away = winner(m2, m2.winnerSide);
+        if (!away.name) away.label = "V. " + m2.label;
+      }
+      const d = dates[i] || {};
+      out.push({ label: KO_LABELS.r16 + " #" + (i+1), round:"r16", idx:i,
+        home, away, date: d.date || null, time: d.time || null, winnerSide: pick(ko.r16, i) });
+    }
+    return out;
+  }
+  const r16 = buildR16();
   const qf  = buildRound(r16, 4, "qf");
   const sf  = buildRound(qf, 2, "sf");
 
