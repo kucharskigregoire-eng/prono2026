@@ -1473,13 +1473,17 @@ function cmpCardHtml(homeName, awayName, real, subLabel, predLookup, koMode) {
 
 // Rassemble tous les matchs déjà joués (poule + phase finale), tous types confondus,
 // triés du plus récent au plus ancien — pour ne pas avoir à dérouler tout le calendrier.
-function gatherRecentResults(limit) {
-  const items = [];
+// Sépare phase finale et poules : les KO sont rares (max 31 sur tout le tournoi)
+// et méritent d'être tous visibles ; les poules ont déjà un calendrier complet
+// juste après cette section, on ne garde que les 8 plus récents.
+function gatherRecentResults(limitGroup) {
+  const groupItems = [];
   SCHEDULE.forEach(m => {
     const real = realScore(m.group, m.matchIdx);
     if (!real) return;
-    items.push({ kind: "group", sortKey: m.date + "T12:00", m, real });
+    groupItems.push({ kind: "group", sortKey: m.date + "T12:00", m, real });
   });
+  const koItems = [];
   const rb = computeBracket(DATA.actual);
   [
     ...rb.r32.map(m => ({ m, key: "r32" })), ...rb.r16.map(m => ({ m, key: "r16" })),
@@ -1489,10 +1493,12 @@ function gatherRecentResults(limit) {
     const real = realKoScore(key, m.idx);
     if (!real) return;
     const t = m.time ? m.time.replace("h", ":") : "12:00";
-    items.push({ kind: "ko", sortKey: (m.date || "") + "T" + t, m, key, real });
+    koItems.push({ kind: "ko", sortKey: (m.date || "") + "T" + t, m, key, real });
   });
-  items.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
-  return items.slice(0, limit);
+  const desc = (a, b) => b.sortKey.localeCompare(a.sortKey);
+  koItems.sort(desc);
+  groupItems.sort(desc);
+  return { ko: koItems, group: groupItems.slice(0, limitGroup || 8) };
 }
 
 function renderMatchs() {
@@ -1503,17 +1509,20 @@ function renderMatchs() {
 
   // ===== Derniers résultats (accès rapide) =====
   const recent = gatherRecentResults(8);
-  if (recent.length) {
-    html += `<div class="cmp-section-title">🔥 Derniers résultats</div><div class="cmp-recent-wrap">`;
-    recent.forEach(it => {
-      if (it.kind === "group") {
-        html += cmpCardHtml(it.m.home, it.m.away, it.real, "Groupe " + it.m.group, p => (p.groupScores[it.m.group] || [])[it.m.matchIdx]);
-      } else {
-        const homeName = it.m.home.name || it.m.home.label;
-        const awayName = it.m.away.name || it.m.away.label;
-        const dl = it.m.date ? formatDateFr(it.m.date) + (it.m.time ? " · " + it.m.time : "") : "";
-        html += cmpCardHtml(homeName, awayName, it.real, it.m.label + (dl ? " · " + dl : ""), p => koPlayerScore(p, it.key, it.m.idx), true);
-      }
+  if (recent.ko.length) {
+    html += `<div class="cmp-section-title">🔥 Derniers résultats — phase finale</div><div class="cmp-recent-wrap">`;
+    recent.ko.forEach(it => {
+      const homeName = it.m.home.name || it.m.home.label;
+      const awayName = it.m.away.name || it.m.away.label;
+      const dl = it.m.date ? formatDateFr(it.m.date) + (it.m.time ? " · " + it.m.time : "") : "";
+      html += cmpCardHtml(homeName, awayName, it.real, it.m.label + (dl ? " · " + dl : ""), p => koPlayerScore(p, it.key, it.m.idx), true);
+    });
+    html += `</div>`;
+  }
+  if (recent.group.length) {
+    html += `<div class="cmp-section-title">🔥 Derniers résultats — poules</div><div class="cmp-recent-wrap">`;
+    recent.group.forEach(it => {
+      html += cmpCardHtml(it.m.home, it.m.away, it.real, "Groupe " + it.m.group, p => (p.groupScores[it.m.group] || [])[it.m.matchIdx]);
     });
     html += `</div>`;
   }
