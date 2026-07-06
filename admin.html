@@ -671,6 +671,34 @@
   .ko-wait {
     margin-top: 7px; font-size: 0.72rem; font-style: italic; color: var(--muted);
   }
+  /* Ligne "score à 90 min" (renseigner si le match est allé en prolongations) */
+  .ko-row-90 {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    margin-top: 8px; padding-top: 8px;
+    border-top: 1px dashed var(--border);
+    font-size: 0.72rem; color: var(--muted);
+  }
+  .ko-90-label { font-weight: 700; flex: 0 0 auto; }
+  .ko-90-hint  { font-style: italic; flex: 1 1 auto; text-align: right; min-width: 0; opacity: 0.85; }
+  .score-input-90 {
+    width: 30px; flex: 0 0 30px; height: 26px;
+    padding: 0 3px;
+    border: 1px solid var(--border); border-radius: 5px;
+    font-size: 0.85rem; font-weight: 600; text-align: center;
+    font-variant-numeric: tabular-nums;
+    background: var(--surface); color: var(--text-strong);
+    font-family: 'Inter', sans-serif; -moz-appearance: textfield;
+  }
+  .score-input-90::-webkit-inner-spin-button,
+  .score-input-90::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .score-input-90:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(245,158,11,0.2);
+  }
+  .score-input-90.filled {
+    background: var(--accent-2); border-color: var(--accent-2); color: #fff;
+  }
+  .score-sep-90 { color: var(--muted); font-weight: 700; flex: 0 0 auto; font-size: 0.85rem; }
 
 </style>
 <script>
@@ -948,6 +976,31 @@ const REAL_R32 = [
   { home:"Suisse",         away:"Algérie",    date:"2026-07-03", time:"05h00" },
   { home:"Colombie",       away:"Ghana",      date:"2026-07-04", time:"03h30" }
 ];
+
+// 8es de finale — équipes réelles (à compléter au fur et à mesure des résultats FIFA).
+// Chaque case correspond au 8e #(i+1) et jumelle les vainqueurs des 16es (#2i+1, #2i+2).
+// Pour figer une confrontation, renseigner home ET away. Sinon laisser les deux à null :
+// l'app retombe automatiquement sur "V. 16e #X" (comportement actuel) sans effacer
+// les scores déjà saisis à cette position.
+const REAL_R16 = [
+  // 8e #1  ← V. 16e #1 (Allemagne/Paraguay)      × V. 16e #2 (France/Suède)
+  { home:null, away:null },
+  // 8e #2  ← V. 16e #3 (Afrique du Sud/Canada)   × V. 16e #4 (Pays-Bas/Maroc)
+  { home:null, away:null },
+  // 8e #3  ← V. 16e #5 (Portugal/Croatie)        × V. 16e #6 (Espagne/Autriche)
+  { home:null, away:null },
+  // 8e #4  ← V. 16e #7 (États-Unis/Bosnie-H.)    × V. 16e #8 (Belgique/Sénégal)
+  { home:null, away:null },
+  // 8e #5  ← V. 16e #9 (Brésil/Japon)            × V. 16e #10 (Côte d'Ivoire/Norvège)
+  { home:null, away:null },
+  // 8e #6  ← V. 16e #11 (Mexique/Équateur)       × V. 16e #12 (Angleterre/RD Congo)
+  { home:null, away:null },
+  // 8e #7  ← V. 16e #13 (Argentine/Cap-Vert)     × V. 16e #14 (Égypte/Australie)
+  { home:null, away:null },
+  // 8e #8  ← V. 16e #15 (Suisse/Algérie)         × V. 16e #16 (Colombie/Ghana)
+  { home:null, away:null }
+];
+
 const KO_DATES = {
   r16: [
     {date:"2026-07-04",time:"23h00"},{date:"2026-07-04",time:"19h00"},
@@ -998,7 +1051,33 @@ function computeBracket(pl) {
     return out;
   }
 
-  const r16 = buildRound(r32, 8, "r16");
+  // 8es : figés par REAL_R16 quand renseignés, sinon dérivés des 16es (fallback)
+  function buildR16() {
+    const out = [];
+    const dates = KO_DATES.r16;
+    for (let i = 0; i < 8; i++) {
+      const forced = REAL_R16[i] || {};
+      const m1 = r32[2*i], m2 = r32[2*i+1];
+      let home, away;
+      if (forced.home) {
+        home = { name: forced.home, label: forced.home };
+      } else {
+        home = winner(m1, m1.winnerSide);
+        if (!home.name) home.label = "V. " + m1.label;
+      }
+      if (forced.away) {
+        away = { name: forced.away, label: forced.away };
+      } else {
+        away = winner(m2, m2.winnerSide);
+        if (!away.name) away.label = "V. " + m2.label;
+      }
+      const d = dates[i] || {};
+      out.push({ label: KO_LABELS.r16 + " #" + (i+1), round:"r16", idx:i,
+        home, away, date: d.date || null, time: d.time || null, winnerSide: pick(ko.r16, i) });
+    }
+    return out;
+  }
+  const r16 = buildR16();
   const qf  = buildRound(r16, 4, "qf");
   const sf  = buildRound(qf, 2, "sf");
 
@@ -1045,7 +1124,7 @@ function escapeHtml(s) {
 }
 
 // ============ SCORING ============
-// Barème par match de poule :
+// Barème par match :
 //   5 pts = score exact
 //   3 pts = bon vainqueur ET bon écart (inclut un nul différent du nul pronostiqué)
 //   2 pts = bon vainqueur seulement
@@ -1061,6 +1140,23 @@ function scoreMatch(pred, actual) {
   return 2;
 }
 
+// Barème spécifique phase finale : si le match est allé aux prolongations (résultat
+// réel enrichi avec h90/a90 = score à la fin des 90 min), on prend le meilleur entre
+//   - la lecture "score final" (h/a), barème complet 0/2/3/5 ;
+//   - la lecture "score à 90 min" (h90/a90), plafonnée à 3 pts (le prono a raté la prolongation).
+// Ceci évite qu'un prono "2-2" à un match qui finit 3-2 après prolongations rapporte 0 pt,
+// tout en gardant l'avantage complet à celui qui a prédit le score final exact.
+function scoreKoMatch(pred, actual) {
+  const base = scoreMatch(pred, actual);
+  if (base === null) return null;
+  if (actual && actual.h90 !== null && actual.h90 !== undefined
+              && actual.a90 !== null && actual.a90 !== undefined) {
+    const alt = scoreMatch(pred, { h: actual.h90, a: actual.a90 });
+    if (alt !== null) return Math.max(base, Math.min(alt, 3));
+  }
+  return base;
+}
+
 function normalizeName(s) {
   return String(s || "").trim().toLowerCase().replace(/\s+/g, " ")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -1070,8 +1166,8 @@ function normalizeName(s) {
 // actual = { groupScores: {A:[{h,a}|null...]}, topScorer: "..." }
 function computePlayerScore(prediction, actual) {
   let total = 0, exact = 0, ecart = 0, vainqueur = 0, rates = 0, joues = 0;
-  function tally(pred, real) {
-    const pts = scoreMatch(pred, real);
+  function tally(pred, real, koMode) {
+    const pts = koMode ? scoreKoMatch(pred, real) : scoreMatch(pred, real);
     if (pts === null) return;
     joues++; total += pts;
     if (pts === 5) exact++; else if (pts === 3) ecart++; else if (pts === 2) vainqueur++; else rates++;
@@ -1087,7 +1183,8 @@ function computePlayerScore(prediction, actual) {
       tally(pred, real);
     });
   });
-  // Phase finale (mêmes points 5/3/2/0, par emplacement de match)
+  // Phase finale (mêmes points 5/3/2/0, par emplacement de match ; barème "prolongations"
+  // si real.h90/a90 renseignés — cf. scoreKoMatch)
   const aKO = (actual && actual.knockoutScores) || {};
   const pKO = (prediction && prediction.knockoutScores) || {};
   KO_ROUNDS.forEach(([key, n]) => {
@@ -1095,13 +1192,13 @@ function computePlayerScore(prediction, actual) {
     for (let i = 0; i < n; i++) {
       const real = ar[i]; if (!real || real.h === null || real.h === undefined || real.a === null || real.a === undefined) continue;
       const p = pr[i]; if (!p || p.h === null || p.h === undefined || p.a === null || p.a === undefined) continue;
-      tally(p, real);
+      tally(p, real, true);
     }
   });
   ["final", "third"].forEach(key => {
     const real = aKO[key]; if (!real || real.h === null || real.h === undefined || real.a === null || real.a === undefined) return;
     const p = pKO[key]; if (!p || p.h === null || p.h === undefined || p.a === null || p.a === undefined) return;
-    tally(p, real);
+    tally(p, real, true);
   });
   // Meilleur buteur
   let topScorerPts = 0;
@@ -1112,8 +1209,16 @@ function computePlayerScore(prediction, actual) {
 }
 
 // Normalise une structure knockoutScores (complète/sécurise toutes les cases).
+// Les champs optionnels h90/a90 (score à 90 min pour les matchs allés en prolongations)
+// sont préservés quand ils existent, sans être forcés sur les cases neuves.
 function fullKnockoutScores(ks) {
-  function pair(s) { return (s && typeof s === "object") ? { h: (s.h === undefined ? null : s.h), a: (s.a === undefined ? null : s.a) } : { h: null, a: null }; }
+  function pair(s) {
+    if (!s || typeof s !== "object") return { h: null, a: null };
+    const out = { h: (s.h === undefined ? null : s.h), a: (s.a === undefined ? null : s.a) };
+    if (s.h90 !== undefined) out.h90 = s.h90;
+    if (s.a90 !== undefined) out.a90 = s.a90;
+    return out;
+  }
   function arr(src, n) { src = Array.isArray(src) ? src : []; return Array(n).fill(null).map((_, i) => pair(src[i])); }
   ks = ks || {};
   return { r32: arr(ks.r32, 16), r16: arr(ks.r16, 8), qf: arr(ks.qf, 4), sf: arr(ks.sf, 2), final: pair(ks.final), third: pair(ks.third) };
@@ -1123,9 +1228,9 @@ function fullKnockoutScores(ks) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     CODES, flagHTML, GROUPS, SCHEDULE, PAIRS_BY_GROUP, META_BY_GROUP,
-    R32_DEFS, THIRD_SLOTS, REAL_R32, KO_DATES, KO_LABELS, KO_ROUNDS,
+    R32_DEFS, THIRD_SLOTS, REAL_R32, REAL_R16, KO_DATES, KO_LABELS, KO_ROUNDS,
     emptyPlayer, computeGroupStandings, groupComplete, computeBracket,
-    formatDateFr, escapeHtml, scoreMatch, normalizeName, computePlayerScore, fullKnockoutScores
+    formatDateFr, escapeHtml, scoreMatch, scoreKoMatch, normalizeName, computePlayerScore, fullKnockoutScores
   };
 }
 
@@ -1343,6 +1448,8 @@ function koCardHTMLA(m) {
   const sc = koScoreObjA(round, idx);
   const hv = (sc && sc.h !== null && sc.h !== undefined) ? sc.h : "";
   const av = (sc && sc.a !== null && sc.a !== undefined) ? sc.a : "";
+  const h90v = (sc && sc.h90 !== null && sc.h90 !== undefined) ? sc.h90 : "";
+  const a90v = (sc && sc.a90 !== null && sc.a90 !== undefined) ? sc.a90 : "";
   const pick = koWinnerPickA(round, idx);
   const draw = ready && hv !== "" && av !== "" && parseInt(hv) === parseInt(av);
   const homeName = m.home.name || m.home.label;
@@ -1362,6 +1469,16 @@ function koCardHTMLA(m) {
   } else if (!ready) {
     qual = `<div class="ko-wait">En attente du tour précédent</div>`;
   }
+  // Ligne "score à 90 min" : uniquement affichée quand le match est jouable (équipes connues),
+  // à remplir seulement si le match est allé en prolongations.
+  const row90 = ready ? `
+    <div class="ko-row-90">
+      <span class="ko-90-label">à 90 min :</span>
+      <input type="text" inputmode="numeric" maxlength="2" class="score-input-90${h90v!==""?" filled":""}" value="${h90v}" data-round="${round}" data-idx="${idx}" data-side="h90" />
+      <span class="score-sep-90">–</span>
+      <input type="text" inputmode="numeric" maxlength="2" class="score-input-90${a90v!==""?" filled":""}" value="${a90v}" data-round="${round}" data-idx="${idx}" data-side="a90" />
+      <span class="ko-90-hint">à remplir si prolongations</span>
+    </div>` : "";
   return `<div class="ko-card" data-round="${round}" data-idx="${idx}">
     <div class="ko-card-head"><span class="ko-card-label">${escapeHtml(m.label)}</span>${dateStr?`<span class="ko-card-date">${escapeHtml(dateStr)}</span>`:""}</div>
     <div class="ko-row">
@@ -1370,7 +1487,7 @@ function koCardHTMLA(m) {
       <span class="score-sep">–</span>
       <input type="text" inputmode="numeric" maxlength="2" class="score-input${av!==""?" filled":""}" value="${av}" data-round="${round}" data-idx="${idx}" data-side="a" ${dis} />
       <span class="ko-team a${pick===1?" ko-win":""}"><span class="ko-team-name">${escapeHtml(awayName)}</span>${flagA}</span>
-    </div>${qual}
+    </div>${row90}${qual}
   </div>`;
 }
 function renderKoResults() {
@@ -1394,33 +1511,44 @@ function renderKoResults() {
   attachKoListenersA();
 }
 function attachKoListenersA() {
-  document.querySelectorAll("#koResultsGrid .score-input, #koThirdResults .score-input").forEach(inp => {
+  document.querySelectorAll("#koResultsGrid .score-input, #koResultsGrid .score-input-90, #koThirdResults .score-input, #koThirdResults .score-input-90").forEach(inp => {
     inp.addEventListener("input", (e) => {
       const cleaned = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
       if (cleaned !== e.target.value) e.target.value = cleaned;
       const round = e.target.dataset.round, idx = parseInt(e.target.dataset.idx), side = e.target.dataset.side;
-      koScoreObjA(round, idx)[side] = cleaned === "" ? null : parseInt(cleaned);
+      const scoreObj = koScoreObjA(round, idx);
+      scoreObj[side] = cleaned === "" ? null : parseInt(cleaned);
+      // Si on efface un score final (h ou a), on efface aussi la donnée 90 min
+      // (qui ne sert plus à rien tant que le match n'a pas de résultat final).
+      if ((side === "h" || side === "a") && cleaned === "") {
+        delete scoreObj.h90; delete scoreObj.a90;
+      }
       e.target.classList.toggle("filled", cleaned !== "");
-      syncWinnerA(round, idx);
-      const card = e.target.closest(".ko-card"), pick = koWinnerPickA(round, idx);
-      const hEl = card.querySelector(".ko-team.h"), aEl = card.querySelector(".ko-team.a");
-      if (hEl) hEl.classList.toggle("ko-win", pick === 0);
-      if (aEl) aEl.classList.toggle("ko-win", pick === 1);
+      // Le vainqueur ne se déduit que du score final (h/a), pas du 90 min.
+      if (side === "h" || side === "a") {
+        syncWinnerA(round, idx);
+        const card = e.target.closest(".ko-card"), pick = koWinnerPickA(round, idx);
+        const hEl = card.querySelector(".ko-team.h"), aEl = card.querySelector(".ko-team.a");
+        if (hEl) hEl.classList.toggle("ko-win", pick === 0);
+        if (aEl) aEl.classList.toggle("ko-win", pick === 1);
+      }
       saveAdmin();
     });
     // Mémorise vers quel champ le focus se dirige (Tab/Maj+Tab) AVANT que le
     // re-rendu de "change" ne détruise le DOM — sinon le focus se perd.
     inp.addEventListener("blur", (e) => {
       const rt = e.relatedTarget;
-      e.target._focusNext = (rt && rt.classList && rt.classList.contains("score-input"))
-        ? { round: rt.dataset.round, idx: rt.dataset.idx, side: rt.dataset.side }
+      const isScoreInput = rt && rt.classList && (rt.classList.contains("score-input") || rt.classList.contains("score-input-90"));
+      e.target._focusNext = isScoreInput
+        ? { round: rt.dataset.round, idx: rt.dataset.idx, side: rt.dataset.side, is90: rt.classList.contains("score-input-90") }
         : null;
     });
     inp.addEventListener("change", (e) => {
       const restore = e.target._focusNext;
       renderKoResults(); renderApercu();
       if (restore) {
-        const sel = `.ko-card[data-round="${restore.round}"][data-idx="${restore.idx}"] .score-input[data-side="${restore.side}"]`;
+        const cls = restore.is90 ? "score-input-90" : "score-input";
+        const sel = `.ko-card[data-round="${restore.round}"][data-idx="${restore.idx}"] .${cls}[data-side="${restore.side}"]`;
         const el = document.querySelector(sel);
         if (el && !el.disabled) {
           el.focus();
@@ -1431,7 +1559,7 @@ function attachKoListenersA() {
     inp.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        const all = Array.from(document.querySelectorAll("#koResultsGrid .score-input, #koThirdResults .score-input"));
+        const all = Array.from(document.querySelectorAll("#koResultsGrid .score-input, #koResultsGrid .score-input-90, #koThirdResults .score-input, #koThirdResults .score-input-90"));
         const idx = all.indexOf(e.target);
         const next = all[idx + 1];
         if (next) next.focus();
