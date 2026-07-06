@@ -1003,6 +1003,31 @@ const REAL_R32 = [
   { home:"Suisse",         away:"Algérie",    date:"2026-07-03", time:"05h00" },
   { home:"Colombie",       away:"Ghana",      date:"2026-07-04", time:"03h30" }
 ];
+
+// 8es de finale — équipes réelles (à compléter au fur et à mesure des résultats FIFA).
+// Chaque case correspond au 8e #(i+1) et jumelle les vainqueurs des 16es (#2i+1, #2i+2).
+// Pour figer une confrontation, renseigner home ET away. Sinon laisser les deux à null :
+// l'app retombe automatiquement sur "V. 16e #X" (comportement actuel) sans effacer
+// les scores déjà saisis à cette position.
+const REAL_R16 = [
+  // 8e #1  ← V. 16e #1 (Allemagne/Paraguay)      × V. 16e #2 (France/Suède)
+  { home:null, away:null },
+  // 8e #2  ← V. 16e #3 (Afrique du Sud/Canada)   × V. 16e #4 (Pays-Bas/Maroc)
+  { home:null, away:null },
+  // 8e #3  ← V. 16e #5 (Portugal/Croatie)        × V. 16e #6 (Espagne/Autriche)
+  { home:null, away:null },
+  // 8e #4  ← V. 16e #7 (États-Unis/Bosnie-H.)    × V. 16e #8 (Belgique/Sénégal)
+  { home:null, away:null },
+  // 8e #5  ← V. 16e #9 (Brésil/Japon)            × V. 16e #10 (Côte d'Ivoire/Norvège)
+  { home:null, away:null },
+  // 8e #6  ← V. 16e #11 (Mexique/Équateur)       × V. 16e #12 (Angleterre/RD Congo)
+  { home:null, away:null },
+  // 8e #7  ← V. 16e #13 (Argentine/Cap-Vert)     × V. 16e #14 (Égypte/Australie)
+  { home:null, away:null },
+  // 8e #8  ← V. 16e #15 (Suisse/Algérie)         × V. 16e #16 (Colombie/Ghana)
+  { home:null, away:null }
+];
+
 const KO_DATES = {
   r16: [
     {date:"2026-07-04",time:"23h00"},{date:"2026-07-04",time:"19h00"},
@@ -1053,7 +1078,33 @@ function computeBracket(pl) {
     return out;
   }
 
-  const r16 = buildRound(r32, 8, "r16");
+  // 8es : figés par REAL_R16 quand renseignés, sinon dérivés des 16es (fallback)
+  function buildR16() {
+    const out = [];
+    const dates = KO_DATES.r16;
+    for (let i = 0; i < 8; i++) {
+      const forced = REAL_R16[i] || {};
+      const m1 = r32[2*i], m2 = r32[2*i+1];
+      let home, away;
+      if (forced.home) {
+        home = { name: forced.home, label: forced.home };
+      } else {
+        home = winner(m1, m1.winnerSide);
+        if (!home.name) home.label = "V. " + m1.label;
+      }
+      if (forced.away) {
+        away = { name: forced.away, label: forced.away };
+      } else {
+        away = winner(m2, m2.winnerSide);
+        if (!away.name) away.label = "V. " + m2.label;
+      }
+      const d = dates[i] || {};
+      out.push({ label: KO_LABELS.r16 + " #" + (i+1), round:"r16", idx:i,
+        home, away, date: d.date || null, time: d.time || null, winnerSide: pick(ko.r16, i) });
+    }
+    return out;
+  }
+  const r16 = buildR16();
   const qf  = buildRound(r16, 4, "qf");
   const sf  = buildRound(qf, 2, "sf");
 
@@ -1100,7 +1151,7 @@ function escapeHtml(s) {
 }
 
 // ============ SCORING ============
-// Barème par match de poule :
+// Barème par match :
 //   5 pts = score exact
 //   3 pts = bon vainqueur ET bon écart (inclut un nul différent du nul pronostiqué)
 //   2 pts = bon vainqueur seulement
@@ -1116,6 +1167,23 @@ function scoreMatch(pred, actual) {
   return 2;
 }
 
+// Barème spécifique phase finale : si le match est allé aux prolongations (résultat
+// réel enrichi avec h90/a90 = score à la fin des 90 min), on prend le meilleur entre
+//   - la lecture "score final" (h/a), barème complet 0/2/3/5 ;
+//   - la lecture "score à 90 min" (h90/a90), plafonnée à 3 pts (le prono a raté la prolongation).
+// Ceci évite qu'un prono "2-2" à un match qui finit 3-2 après prolongations rapporte 0 pt,
+// tout en gardant l'avantage complet à celui qui a prédit le score final exact.
+function scoreKoMatch(pred, actual) {
+  const base = scoreMatch(pred, actual);
+  if (base === null) return null;
+  if (actual && actual.h90 !== null && actual.h90 !== undefined
+              && actual.a90 !== null && actual.a90 !== undefined) {
+    const alt = scoreMatch(pred, { h: actual.h90, a: actual.a90 });
+    if (alt !== null) return Math.max(base, Math.min(alt, 3));
+  }
+  return base;
+}
+
 function normalizeName(s) {
   return String(s || "").trim().toLowerCase().replace(/\s+/g, " ")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -1125,8 +1193,8 @@ function normalizeName(s) {
 // actual = { groupScores: {A:[{h,a}|null...]}, topScorer: "..." }
 function computePlayerScore(prediction, actual) {
   let total = 0, exact = 0, ecart = 0, vainqueur = 0, rates = 0, joues = 0;
-  function tally(pred, real) {
-    const pts = scoreMatch(pred, real);
+  function tally(pred, real, koMode) {
+    const pts = koMode ? scoreKoMatch(pred, real) : scoreMatch(pred, real);
     if (pts === null) return;
     joues++; total += pts;
     if (pts === 5) exact++; else if (pts === 3) ecart++; else if (pts === 2) vainqueur++; else rates++;
@@ -1142,7 +1210,8 @@ function computePlayerScore(prediction, actual) {
       tally(pred, real);
     });
   });
-  // Phase finale (mêmes points 5/3/2/0, par emplacement de match)
+  // Phase finale (mêmes points 5/3/2/0, par emplacement de match ; barème "prolongations"
+  // si real.h90/a90 renseignés — cf. scoreKoMatch)
   const aKO = (actual && actual.knockoutScores) || {};
   const pKO = (prediction && prediction.knockoutScores) || {};
   KO_ROUNDS.forEach(([key, n]) => {
@@ -1150,13 +1219,13 @@ function computePlayerScore(prediction, actual) {
     for (let i = 0; i < n; i++) {
       const real = ar[i]; if (!real || real.h === null || real.h === undefined || real.a === null || real.a === undefined) continue;
       const p = pr[i]; if (!p || p.h === null || p.h === undefined || p.a === null || p.a === undefined) continue;
-      tally(p, real);
+      tally(p, real, true);
     }
   });
   ["final", "third"].forEach(key => {
     const real = aKO[key]; if (!real || real.h === null || real.h === undefined || real.a === null || real.a === undefined) return;
     const p = pKO[key]; if (!p || p.h === null || p.h === undefined || p.a === null || p.a === undefined) return;
-    tally(p, real);
+    tally(p, real, true);
   });
   // Meilleur buteur
   let topScorerPts = 0;
@@ -1167,8 +1236,16 @@ function computePlayerScore(prediction, actual) {
 }
 
 // Normalise une structure knockoutScores (complète/sécurise toutes les cases).
+// Les champs optionnels h90/a90 (score à 90 min pour les matchs allés en prolongations)
+// sont préservés quand ils existent, sans être forcés sur les cases neuves.
 function fullKnockoutScores(ks) {
-  function pair(s) { return (s && typeof s === "object") ? { h: (s.h === undefined ? null : s.h), a: (s.a === undefined ? null : s.a) } : { h: null, a: null }; }
+  function pair(s) {
+    if (!s || typeof s !== "object") return { h: null, a: null };
+    const out = { h: (s.h === undefined ? null : s.h), a: (s.a === undefined ? null : s.a) };
+    if (s.h90 !== undefined) out.h90 = s.h90;
+    if (s.a90 !== undefined) out.a90 = s.a90;
+    return out;
+  }
   function arr(src, n) { src = Array.isArray(src) ? src : []; return Array(n).fill(null).map((_, i) => pair(src[i])); }
   ks = ks || {};
   return { r32: arr(ks.r32, 16), r16: arr(ks.r16, 8), qf: arr(ks.qf, 4), sf: arr(ks.sf, 2), final: pair(ks.final), third: pair(ks.third) };
@@ -1178,9 +1255,9 @@ function fullKnockoutScores(ks) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     CODES, flagHTML, GROUPS, SCHEDULE, PAIRS_BY_GROUP, META_BY_GROUP,
-    R32_DEFS, THIRD_SLOTS, REAL_R32, KO_DATES, KO_LABELS, KO_ROUNDS,
+    R32_DEFS, THIRD_SLOTS, REAL_R32, REAL_R16, KO_DATES, KO_LABELS, KO_ROUNDS,
     emptyPlayer, computeGroupStandings, groupComplete, computeBracket,
-    formatDateFr, escapeHtml, scoreMatch, normalizeName, computePlayerScore, fullKnockoutScores
+    formatDateFr, escapeHtml, scoreMatch, scoreKoMatch, normalizeName, computePlayerScore, fullKnockoutScores
   };
 }
 
@@ -1349,7 +1426,10 @@ function realKoScore(key, idx) {
   const ks = DATA.actual.knockoutScores; if (!ks) return null;
   const o = (key === "final" || key === "third") ? ks[key] : (ks[key] && ks[key][idx]);
   if (!o || o.h === null || o.h === undefined || o.a === null || o.a === undefined) return null;
-  return { h: o.h, a: o.a };
+  const out = { h: o.h, a: o.a };
+  if (o.h90 !== undefined && o.h90 !== null) out.h90 = o.h90;
+  if (o.a90 !== undefined && o.a90 !== null) out.a90 = o.a90;
+  return out;
 }
 function koPlayerScore(p, key, idx) {
   const ks = p.knockoutScores; if (!ks) return null;
@@ -1358,7 +1438,7 @@ function koPlayerScore(p, key, idx) {
 
 // Carte de comparatif générique (poule ou phase finale) : le résultat réel
 // ET les pronos restent masqués tant que le match n'a pas été joué.
-function cmpCardHtml(homeName, awayName, real, subLabel, predLookup) {
+function cmpCardHtml(homeName, awayName, real, subLabel, predLookup, koMode) {
   const realHtml = real
     ? `<span class="cmp-real">${real.h} – ${real.a}</span>`
     : `<span class="cmp-real pending">à jouer</span>`;
@@ -1367,7 +1447,7 @@ function cmpCardHtml(homeName, awayName, real, subLabel, predLookup) {
     DATA.players.forEach(p => {
       const s = predLookup(p);
       if (!s || s.h === null || s.h === undefined || s.a === null || s.a === undefined) return;
-      const pts = scoreMatch(s, real);
+      const pts = koMode ? scoreKoMatch(s, real) : scoreMatch(s, real);
       const ptsHtml = `<span class="pts pts-${pts}">${pts}</span>`;
       const cls = pts === 5 ? "cmp-pred is5" : "cmp-pred";
       preds += `<span class="${cls}"><span class="who">${escapeHtml(p.name)}</span>
@@ -1432,7 +1512,7 @@ function renderMatchs() {
         const homeName = it.m.home.name || it.m.home.label;
         const awayName = it.m.away.name || it.m.away.label;
         const dl = it.m.date ? formatDateFr(it.m.date) + (it.m.time ? " · " + it.m.time : "") : "";
-        html += cmpCardHtml(homeName, awayName, it.real, it.m.label + (dl ? " · " + dl : ""), p => koPlayerScore(p, it.key, it.m.idx));
+        html += cmpCardHtml(homeName, awayName, it.real, it.m.label + (dl ? " · " + dl : ""), p => koPlayerScore(p, it.key, it.m.idx), true);
       }
     });
     html += `</div>`;
@@ -1480,7 +1560,7 @@ function ktExtraHtml(m) {
     if (!sc || sc.h === null || sc.h === undefined || sc.a === null || sc.a === undefined) return;
     predCount++;
     if (!real) return;
-    const pts = scoreMatch(sc, real);
+    const pts = scoreKoMatch(sc, real);
     const cls = pts === 5 ? "cmp-pred is5" : "cmp-pred";
     predsHtml += `<span class="${cls}"><span class="who">${escapeHtml(p.name)}</span><span class="sc">${sc.h}–${sc.a}</span><span class="pts pts-${pts}">${pts}</span></span>`;
   });
