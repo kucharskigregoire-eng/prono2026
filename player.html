@@ -974,6 +974,22 @@ const REAL_R16 = [
   { home:"Suisse", away:"Colombie" }
 ];
 
+// Quarts de finale — équipes réelles (à compléter au fur et à mesure des résultats FIFA).
+// Chaque case correspond au QF #(i+1) et jumelle les vainqueurs des 8es (#2i+1, #2i+2).
+// Pour figer une confrontation, renseigner home ET away. Sinon laisser les deux à null :
+// l'app retombe automatiquement sur "V. 8e #X" (comportement actuel) sans effacer
+// les scores déjà saisis à cette position.
+const REAL_R8 = [
+  // QF #1 ← V. 8e #1 (Paraguay/France) × V. 8e #2 (Canada/Maroc)
+  { home: "France", away: "Maroc" },
+  // QF #2 ← V. 8e #3 (Portugal/Espagne) × V. 8e #4 (États-Unis/Belgique)
+  { home: "Espagne", away: "Belgique" },
+  // QF #3 ← V. 8e #5 (Brésil/Norvège) × V. 8e #6 (Mexique/Angleterre)
+  { home: "Norvège", away: "Angleterre" },
+  // QF #4 ← V. 8e #7 (Argentine/Égypte) × V. 8e #8 (Suisse/Colombie)
+  { home: "Argentine", away: "Suisse" }
+];
+
 const KO_DATES = {
   r16: [
     {date:"2026-07-04",time:"23h00"},{date:"2026-07-04",time:"19h00"},
@@ -1050,8 +1066,36 @@ function computeBracket(pl) {
     }
     return out;
   }
+
+  // Quarts : figés par REAL_R8 quand renseignés, sinon dérivés des 8es (fallback)
+  function buildQF() {
+    const out = [];
+    const dates = KO_DATES.qf;
+    for (let i = 0; i < 4; i++) {
+      const forced = REAL_R8[i] || {};
+      const m1 = r16[2*i], m2 = r16[2*i+1];
+      let home, away;
+      if (forced.home) {
+        home = { name: forced.home, label: forced.home };
+      } else {
+        home = winner(m1, m1.winnerSide);
+        if (!home.name) home.label = "V. " + m1.label;
+      }
+      if (forced.away) {
+        away = { name: forced.away, label: forced.away };
+      } else {
+        away = winner(m2, m2.winnerSide);
+        if (!away.name) away.label = "V. " + m2.label;
+      }
+      const d = dates[i] || {};
+      out.push({ label: KO_LABELS.qf + " #" + (i+1), round:"qf", idx:i,
+        home, away, date: d.date || null, time: d.time || null, winnerSide: pick(ko.qf, i) });
+    }
+    return out;
+  }
+
   const r16 = buildR16();
-  const qf  = buildRound(r16, 4, "qf");
+  const qf  = buildQF();
   const sf  = buildRound(qf, 2, "sf");
 
   const fHome = winner(sf[0], sf[0].winnerSide), fAway = winner(sf[1], sf[1].winnerSide);
