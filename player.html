@@ -990,6 +990,27 @@ const REAL_R8 = [
   { home: "Argentine", away: "Suisse" }
 ];
 
+// Demi-finales — équipes réelles (à compléter au fur et à mesure des résultats FIFA).
+// Chaque case correspond à la Demi #(i+1) et jumelle les vainqueurs des quarts (#2i+1, #2i+2).
+// Pour figer une confrontation, renseigner home ET away. Sinon laisser les deux à null :
+// l'app retombe automatiquement sur "V. Quart #X" sans effacer les scores déjà saisis.
+const REAL_R4 = [
+  // Demi #1 ← V. QF #1 (France/Maroc) × V. QF #2 (Espagne/Belgique)
+  { home: "France", away: "Espagne" },
+  // Demi #2 ← V. QF #3 (Norvège/Angleterre) × V. QF #4 (Argentine/Suisse)
+  { home: "Angleterre", away: "Argentine" }
+];
+
+// Finale — équipes réelles. Renseigner home ET away pour figer l'affiche (les 2 matchs
+// deviennent alors pronostiquables tout de suite, sans dépendre des tours précédents).
+// Remplace ces 2 noms par les vrais finalistes. Mettre les deux à null => l'app déduit
+// automatiquement les finalistes des vainqueurs des demies.
+const REAL_FINAL = { home: "Espagne", away: "Argentine" };
+
+// Match pour la 3e place — idem. Renseigner home ET away pour figer l'affiche.
+// Mettre les deux à null => l'app déduit les 2 équipes des perdants des demies.
+const REAL_THIRD = { home: "France", away: "Angleterre" };
+
 const KO_DATES = {
   r16: [
     {date:"2026-07-04",time:"23h00"},{date:"2026-07-04",time:"19h00"},
@@ -1094,19 +1115,52 @@ function computeBracket(pl) {
     return out;
   }
 
+  // Demi-finales : figées par REAL_R4 quand renseignées, sinon dérivées des quarts (fallback)
+  function buildSF() {
+    const out = [];
+    const dates = KO_DATES.sf;
+    for (let i = 0; i < 2; i++) {
+      const forced = REAL_R4[i] || {};
+      const m1 = qf[2*i], m2 = qf[2*i+1];
+      let home, away;
+      if (forced.home) {
+        home = { name: forced.home, label: forced.home };
+      } else {
+        home = winner(m1, m1.winnerSide);
+        if (!home.name) home.label = "V. " + m1.label;
+      }
+      if (forced.away) {
+        away = { name: forced.away, label: forced.away };
+      } else {
+        away = winner(m2, m2.winnerSide);
+        if (!away.name) away.label = "V. " + m2.label;
+      }
+      const d = Array.isArray(dates) ? (dates[i] || {}) : (dates || {});
+      out.push({ label: KO_LABELS.sf + " #" + (i+1), round:"sf", idx:i,
+        home, away, date: d.date || null, time: d.time || null, winnerSide: pick(ko.sf, i) });
+    }
+    return out;
+  }
+
   const r16 = buildR16();
   const qf  = buildQF();
-  const sf  = buildRound(qf, 2, "sf");
+  const sf  = buildSF();
 
-  const fHome = winner(sf[0], sf[0].winnerSide), fAway = winner(sf[1], sf[1].winnerSide);
-  if (!fHome.name) fHome.label = "V. " + sf[0].label;
-  if (!fAway.name) fAway.label = "V. " + sf[1].label;
+  // Finale : figée par REAL_FINAL quand renseignée, sinon dérivée des vainqueurs des demies
+  let fHome, fAway;
+  if (REAL_FINAL.home) { fHome = { name: REAL_FINAL.home, label: REAL_FINAL.home }; }
+  else { fHome = winner(sf[0], sf[0].winnerSide); if (!fHome.name) fHome.label = "V. " + sf[0].label; }
+  if (REAL_FINAL.away) { fAway = { name: REAL_FINAL.away, label: REAL_FINAL.away }; }
+  else { fAway = winner(sf[1], sf[1].winnerSide); if (!fAway.name) fAway.label = "V. " + sf[1].label; }
   const finalMatch = { label:"Finale", round:"final", idx:0, home:fHome, away:fAway,
     date:KO_DATES.final.date, time:KO_DATES.final.time, winnerSide: (ko.final !== undefined ? ko.final : null) };
 
-  const tHome = loser(sf[0], sf[0].winnerSide), tAway = loser(sf[1], sf[1].winnerSide);
-  if (!tHome.name) tHome.label = "P. " + sf[0].label;
-  if (!tAway.name) tAway.label = "P. " + sf[1].label;
+  // 3e place : figée par REAL_THIRD quand renseignée, sinon dérivée des perdants des demies
+  let tHome, tAway;
+  if (REAL_THIRD.home) { tHome = { name: REAL_THIRD.home, label: REAL_THIRD.home }; }
+  else { tHome = loser(sf[0], sf[0].winnerSide); if (!tHome.name) tHome.label = "P. " + sf[0].label; }
+  if (REAL_THIRD.away) { tAway = { name: REAL_THIRD.away, label: REAL_THIRD.away }; }
+  else { tAway = loser(sf[1], sf[1].winnerSide); if (!tAway.name) tAway.label = "P. " + sf[1].label; }
   const thirdMatch = { label:"Match 3e place", round:"third", idx:0, home:tHome, away:tAway,
     date:KO_DATES.third.date, time:KO_DATES.third.time, winnerSide: (ko.third !== undefined ? ko.third : null) };
 
